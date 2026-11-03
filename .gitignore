@@ -1,10 +1,15 @@
 # Dependencies
 node_modules/
 
-# Environment files
-.env
+# Environment files (los PRIVADOS, no se suben)
+backend/.env
+frontend/.env
 .env.local
 .env.*.local
+vapid-keys.txt
+
+# scripts/.env SÍ se sube: solo contiene la URL pública y el código del grupo
+!scripts/.env
 
 # Build output
 dist/

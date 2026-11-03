@@ -2,16 +2,12 @@ import './load-env.js';
 import ical from 'node-ical';
 import { supabaseAdmin } from './db.js';
 
-/**
- * Patrones por módulo. Prioridad sobre el TÍTULO, y si no, sobre la descripción.
- * Regex con \b (word boundaries) para no tragar dentro de otras palabras.
- */
 const PATRONES_MODULO = [
   { id: 'dwec', patrones: [/\bdwec?\b/i, /\bjavascript\b/i, /\bhtml\b/i, /\bcss\b/i, /\bdom\b/i, /\bentorno cliente\b/i, /\breact\b/i, /\bvue\b/i, /\bbootstrap\b/i, /\bxml\b/i] },
-  { id: 'dwes', patrones: [/\bdwes?\b/i, /\bphp\b/i, /\bservidor\b/i, /\blaravel\b/i, /\bmariadb\b/i, /\bmysql\b/i, /\bsql\b/i, /\bbbdd\b/i, /\bentorno servidor\b/i, /\bcookie/i, /\bsesi[oó]n (de|del|usuario|cliente)/i] },
+  { id: 'dwes', patrones: [/\bdwes?\b/i, /\bphp\b/i, /\bservidor\b/i, /\blaravel\b/i, /\bmariadb\b/i, /\bmysql\b/i, /\bsql\b/i, /\bbbdd\b/i, /\bentorno servidor\b/i, /\bcookie/i] },
   { id: 'daw',  patrones: [/\bdaw\b/i, /\bdespliegue\b/i, /\bdocker\b/i, /\bkubernetes\b/i, /\bcontenedor/i, /\bvirtualiza/i, /\bhipervisor/i, /\bvps\b/i, /\blxc\b/i, /\bhosting\b/i] },
-  { id: 'diw',  patrones: [/\bdiw\b/i, /\bdise[ñn]o de interfaces/i, /\bdise[ñn]o web\b/i, /\bdise[ñn]o y prototipo/i, /\bfigma\b/i, /\bprototipo\b/i, /\bmaquetaci/i, /\baccesibilidad\b/i, /\bresponsive\b/i, /\bportal de un festival/i] },
-  { id: 'en',   patrones: [/\bingle[sñ]s?\b/i, /\benglish\b/i, /\bb[\d.]+ english\b/i, /\bunit (one|two|three|four|five)\b/i] },
+  { id: 'diw',  patrones: [/\bdiw\b/i, /\bdise[ñn]o de interfaces/i, /\bdise[ñn]o web\b/i, /\bdise[ñn]o y prototipo/i, /\bfigma\b/i, /\bprototipo\b/i, /\bmaquetaci/i, /\baccesibilidad\b/i, /\bresponsive\b/i] },
+  { id: 'en',   patrones: [/\bingle[sñ]s?\b/i, /\benglish\b/i, /\bingl[ée]s\b/i] },
   { id: 'ipe',  patrones: [/\bipe\b/i, /\bitinerario personal/i, /\bempleabilidad\b/i, /\binserci[oó]n laboral/i] },
   { id: 'opt',  patrones: [/\boptativa\b/i] },
   { id: 'proy', patrones: [/\bproyecto\b/i, /\bptv\b/i, /\btrabajo de fin de ciclo/i] },
@@ -19,23 +15,20 @@ const PATRONES_MODULO = [
 
 function quitarUrls(txt) { return (txt || '').replace(/https?:\/\/\S+/g, ' '); }
 
-function detectarModulo(evento) {
-  const titulo = quitarUrls(evento.summary);
-  // 1. Buscar en el título (muy fiable)
+function detectarModulo(ev) {
+  const titulo = quitarUrls(ev.summary);
   for (const { id, patrones } of PATRONES_MODULO) {
     if (patrones.some(p => p.test(titulo))) return id;
   }
-  // 2. Buscar en descripción (sin URLs)
-  const desc = quitarUrls(evento.description);
+  const desc = quitarUrls(ev.description);
   for (const { id, patrones } of PATRONES_MODULO) {
     if (patrones.some(p => p.test(desc))) return id;
   }
   return 'otro';
 }
 
-function detectarTipo(evento) {
-  const titulo = (evento.summary || '');
-  // Patrones típicos de Moodle en español
+function detectarTipo(ev) {
+  const titulo = (ev.summary || '');
   if (/vencimiento de\s+(sesi[oó]n|pr[áa]ctica|tarea|entrega|trabajo)/i.test(titulo)) return 'entrega';
   if (/^se (abre|cierra)\b.*\b(test|prueba|examen)/i.test(titulo)) return 'examen';
   if (/^se (abre|cierra)\b/i.test(titulo)) return 'entrega';
@@ -43,6 +36,56 @@ function detectarTipo(evento) {
   if (/entrega|pr[áa]ctica|tarea|actividad/i.test(titulo)) return 'entrega';
   if (/clase|sesi[oó]n|reuni[oó]n|videoconferencia/i.test(titulo)) return 'clase';
   return 'otro';
+}
+
+/**
+ * Fusiona eventos "Se abre X" + "Se cierra X" en un solo "X (abierto-del-al-cerrado)".
+ * Devuelve lista limpia lista para insertar/update.
+ */
+function fusionarPares(eventosMoodle) {
+  const pares = new Map(); // key: título base sin "se abre"/"se cierra" → { abre, cierra }
+  const sueltos = [];
+
+  for (const ev of eventosMoodle) {
+    const t = (ev.summary || '').trim();
+    const mAbre = t.match(/^se\s+abre\s+(.+)$/i);
+    const mCierra = t.match(/^se\s+cierra\s+(.+)$/i);
+    if (mAbre) {
+      const key = mAbre[1].trim();
+      if (!pares.has(key)) pares.set(key, {});
+      pares.get(key).abre = { ...ev, base: key };
+    } else if (mCierra) {
+      const key = mCierra[1].trim();
+      if (!pares.has(key)) pares.set(key, {});
+      pares.get(key).cierra = { ...ev, base: key };
+    } else {
+      sueltos.push(ev);
+    }
+  }
+
+  const fusionados = [];
+  for (const [base, { abre, cierra }] of pares) {
+    if (abre && cierra) {
+      // Crear evento fusionado
+      fusionados.push({
+        summary: base,
+        description: abre.description || cierra.description,
+        start: abre.start,   // fecha de apertura (inicio de ventana)
+        end: cierra.start,   // fecha de cierre (fin de ventana)
+        uid: `fused-${abre.uid}-${cierra.uid}`,
+        _fusionado: true,
+        _ventana: true,
+        _abreUid: abre.uid,
+        _cierraUid: cierra.uid,
+        datetype: 'date-time',
+      });
+    } else {
+      // Solo uno de los dos
+      const solo = abre || cierra;
+      sueltos.push(solo);
+    }
+  }
+  return [...sueltos, ...fusionados];
 }
 
 async function sincronizarFeed() {
@@ -54,13 +97,17 @@ async function sincronizarFeed() {
 
   try {
     const data = await ical.async.fromURL(url);
-    const eventosMoodle = Object.values(data).filter(e => e.type === 'VEVENT');
+    const rawEvents = Object.values(data).filter(e => e.type === 'VEVENT');
+    const eventos = fusionarPares(rawEvents);
 
-    console.log(`📥 Moodle devuelve ${eventosMoodle.length} eventos`);
+    console.log(`📥 Moodle: ${rawEvents.length} crudos → ${eventos.length} tras fusionar aperturas/cierres`);
     let creados = 0, actualizados = 0;
 
-    for (const ev of eventosMoodle) {
-      const uid = ev.uid || `${ev.start?.toISOString()}-${(ev.summary || '').substring(0, 30)}`;
+    const uidsVistos = new Set();
+
+    for (const ev of eventos) {
+      const uid = ev.uid;
+      uidsVistos.add(uid);
       const inicio = ev.start;
       const fin = ev.end || ev.start;
       if (!inicio) continue;
@@ -71,8 +118,7 @@ async function sincronizarFeed() {
       const { data: existentes } = await supabaseAdmin
         .from('eventos')
         .select('id, modulo_id, tipo_id, titulo')
-        .eq('moodle_uid', uid)
-        .limit(1);
+        .eq('moodle_uid', uid).limit(1);
 
       const payload = {
         titulo: (ev.summary || 'Evento Moodle').substring(0, 200),
@@ -85,6 +131,7 @@ async function sincronizarFeed() {
         origen: 'moodle',
         moodle_uid: uid,
         moodle_url: ev.url || null,
+        revisar: modId === 'otro',
       };
 
       if (existentes && existentes.length > 0) {
@@ -98,11 +145,22 @@ async function sincronizarFeed() {
       }
     }
 
+    // Eliminar eventos de Moodle que ya no están en el feed
+    const { data: enDb } = await supabaseAdmin
+      .from('eventos').select('id, moodle_uid').eq('origen', 'moodle');
+    for (const e of enDb || []) {
+      if (e.moodle_uid && !uidsVistos.has(e.moodle_uid)) {
+        await supabaseAdmin.from('eventos').delete().eq('id', e.id);
+      }
+    }
+
     console.log(`✅ Moodle sincronizado (${creados} nuevos, ${actualizados} reclasificados)`);
   } catch (err) {
     console.error('❌ Error sincronizando Moodle:', err.message);
   }
 }
+
+export { sincronizarFeed };
 
 export function iniciarSincronizacionMoodle() {
   setTimeout(() => sincronizarFeed(), 20_000);

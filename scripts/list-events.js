@@ -10,15 +10,22 @@ import { dirname, join } from 'path';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 function loadEnv() {
-  try {
-    const raw = readFileSync(join(__dirname, '..', 'backend', '.env'), 'utf-8');
-    const vars = {};
-    for (const line of raw.split('\n')) {
-      const m = line.match(/^([A-Z_]+)\s*=\s*"?([^"\n]+)"?$/);
-      if (m) vars[m[1]] = m[2];
-    }
-    return vars;
-  } catch { return {}; }
+  const paths = [
+    join(__dirname, '.env'),
+    join(__dirname, '..', 'backend', '.env')
+  ];
+  for (const p of paths) {
+    try {
+      const raw = readFileSync(p, 'utf-8');
+      const vars = {};
+      for (const line of raw.split('\n')) {
+        const m = line.match(/^([A-Z_]+)\s*=\s*"?([^"\n]+)"?$/);
+        if (m) vars[m[1]] = m[2];
+      }
+      if (Object.keys(vars).length) return vars;
+    } catch { /* next */ }
+  }
+  return {};
 }
 
 function parseArgs() {

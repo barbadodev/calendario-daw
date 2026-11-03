@@ -48,7 +48,9 @@ router.post('/', async (req, res) => {
         todo_el_dia: evento.todo_el_dia || false,
         origen: 'manual',
         creado_por: evento.creado_por || null,
-        adjuntos: evento.adjuntos || []
+        adjuntos: evento.adjuntos || [],
+        enlace: evento.enlace || null,
+        completado: evento.completado || false,
       })
       .select()
       .single();
