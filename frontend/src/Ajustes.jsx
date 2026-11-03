@@ -31,20 +31,55 @@ export default function Ajustes({ usuario, eventos }) {
     try {
       const perm = await Notification.requestPermission();
       if (perm !== 'granted') return setMensaje('Permiso denegado');
+
       const reg = await navigator.serviceWorker.ready;
       const pubKeyRes = await fetch(`${API_URL}/api/push/vapid-public-key`);
       const { publicKey } = await pubKeyRes.json();
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: urlBase64ToUint8Array(publicKey) });
-      await fetch(`${API_URL}/api/push/suscribir`, {
+
+      // Si hay una suscripción previa con otra VAPID key, la borramos primero
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        try { await sub.unsubscribe(); } catch { /* da igual */ }
+        sub = null;
+      }
+
+      try {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
+        });
+      } catch (err) {
+        // Segunda vez: si aún dice mismatch, limpiamos registration completa y reintentamos
+        if (String(err.message || '').toLowerCase().includes('match') || String(err.name || '').toLowerCase().includes('invalid')) {
+          try {
+            const oldSub = await reg.pushManager.getSubscription();
+            if (oldSub) await oldSub.unsubscribe();
+          } catch { /* nada */ }
+          await new Promise(r => setTimeout(r, 500));
+          sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey),
+          });
+        } else {
+          throw err;
+        }
+      }
+
+      const res = await fetch(`${API_URL}/api/push/suscribir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id, suscripcion: sub.toJSON() }),
       });
-      setNotifActiva(true);
-      setMensaje('✅ Notificaciones activadas');
+      if (res.ok) {
+        setNotifActiva(true);
+        setMensaje('✅ Notificaciones activadas con éxito');
+      } else {
+        const err = await res.json();
+        setMensaje('❌ ' + (err.error || 'Error al registrar la suscripción'));
+      }
     } catch (err) {
-      console.error(err);
-      setMensaje('❌ Error al activar: ' + err.message);
+      console.error('Error activando notificaciones:', err);
+      setMensaje('❌ Error: ' + (err.message || 'no se pudo activar. Borra la app y reinstálala.'));
     }
   }
 
