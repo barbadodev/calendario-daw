@@ -73,11 +73,18 @@ router.post('/test', async (req, res) => {
         await webpush.sendNotification(s.datos, payload);
         enviadas++;
       } catch (err) {
+        const detalle = {
+          id: s.usuario_id,
+          status: err.statusCode,
+          error: err.message,
+          bodyRespuesta: err.body?.slice(0, 400) || null,
+          endpoint: s.datos?.endpoint?.slice(0, 50),
+        };
         if (err.statusCode === 410) {
           await supabaseAdmin.from('suscripciones_push').delete().eq('id', s.id);
           avisos++;
         } else {
-          errores.push({ id: s.usuario_id, error: err.message, status: err.statusCode });
+          errores.push(detalle);
         }
       }
     }
