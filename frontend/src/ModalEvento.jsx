@@ -101,19 +101,23 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
               {TIPOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
             </select>
 
-            <label>Fecha</label>
-            <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required disabled={esOrigenMoodle} />
+            <div className="campo-fecha-hora">
+              <div>
+                <label>Fecha</label>
+                <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required disabled={esOrigenMoodle} />
+              </div>
+              {!todoElDia && (
+                <div>
+                  <label>Hora</label>
+                  <input type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} disabled={esOrigenMoodle} />
+                </div>
+              )}
+            </div>
 
-            <label>
-              <input type="checkbox" checked={todoElDia} onChange={e => setTodoElDia(e.target.checked)}
-                style={{ width: 'auto', marginRight: 0.5 }} disabled={esOrigenMoodle} />
+            <label className="label-check">
+              <input type="checkbox" checked={todoElDia} onChange={e => setTodoElDia(e.target.checked)} disabled={esOrigenMoodle} />
               Todo el día
             </label>
-
-            {!todoElDia && <>
-              <label>Hora</label>
-              <input type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} disabled={esOrigenMoodle} />
-            </>}
 
             <label>Enlace asociado (opcional)</label>
             <input type="url" value={enlace} onChange={e => setEnlace(e.target.value)}

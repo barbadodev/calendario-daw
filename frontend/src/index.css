@@ -466,11 +466,63 @@ input, textarea, select {
 .modal-body textarea,
 .modal-body select {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   padding: 0.5rem 0.75rem;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--text);
+}
+
+/* Inputs nativos de fecha/hora en iOS: traen un ancho mínimo interno,
+   valor alineado a la derecha y relleno propio que hacen sobresalir el campo. */
+.modal-body input[type="date"],
+.modal-body input[type="time"],
+.modal-body input[type="datetime-local"] {
+  -webkit-appearance: none;
+  appearance: none;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-size: 16px; /* evita el zoom automático de iOS al enfocar */
+}
+
+.modal-body input[type="date"]::-webkit-date-and-time-value,
+.modal-body input[type="time"]::-webkit-date-and-time-value {
+  text-align: left;
+  margin: 0;
+}
+
+.modal-body input[type="checkbox"] {
+  width: auto;
+  min-width: 0;
+}
+
+/* Fecha y hora en dos columnas: ocupa menos vertical y no desborda */
+.campo-fecha-hora {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+.modal-body .campo-fecha-hora label { margin-top: 0; }
+
+/* Checkbox "Todo el día" en una línea, sin mayúsculas raras */
+.modal-body label.label-check {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.8125rem;
+}
+.modal-body label.label-check input[type="checkbox"] { width: auto; }
+
+@media (max-width: 380px) {
+  .campo-fecha-hora { grid-template-columns: 1fr; }
 }
 
 .modal-body textarea { min-height: 4rem; resize: vertical; }
