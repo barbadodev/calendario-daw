@@ -10,6 +10,8 @@ export default function Ajustes({ usuario, eventos }) {
   const [sincronizando, setSincronizando] = useState(false);
   const [probandoNotif, setProbandoNotif] = useState(false);
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
+  const [subs, setSubs] = useState([]);
+  const [mostrarSubs, setMostrarSubs] = useState(false);
 
   useEffect(() => {
     cargarUsuarios();
@@ -59,6 +61,36 @@ export default function Ajustes({ usuario, eventos }) {
     setSincronizando(false);
     // Recarga tras 2 segundos para que se apliquen cambios
     setTimeout(() => window.location.reload(), 2000);
+  }
+
+  async function verSuscripciones() {
+    setMostrarSubs(!mostrarSubs);
+    if (mostrarSubs) return;
+    try {
+      const res = await fetch(`${API_URL}/api/push/suscripciones?sala=${usuario.codigo_sala}`);
+      const data = await res.json();
+      setSubs(data.suscripciones || []);
+    } catch (err) {
+      setSubs([]);
+    }
+  }
+
+  async function resetearSubs() {
+    if (!confirm('¿Borrar TODAS las suscripciones push del grupo? Cada uno tendrá que volver a activarlas.')) return;
+    try {
+      const res = await fetch(`${API_URL}/api/push/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala }),
+      });
+      const data = await res.json();
+      setMensaje('✅ ' + (data.msg || 'Reset hecha. Activa de nuevo las notificaciones.'));
+      setSubs([]);
+      setMostrarSubs(false);
+      setNotifActiva(false);
+    } catch (err) {
+      setMensaje('❌ ' + err.message);
+    }
   }
 
   async function probarNotificacion() {
@@ -129,6 +161,22 @@ export default function Ajustes({ usuario, eventos }) {
             {probandoNotif ? 'Enviando...' : '🧪 Probar'}
           </button>
         </div>
+        <div className="ajustes-item">
+          <span className="ajustes-item-label">Dispositivos suscritos</span>
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button className="btn" onClick={verSuscripciones}>{mostrarSubs ? 'Ocultar' : 'Ver'}</button>
+            <button className="btn btn-danger" onClick={resetearSubs}>Resetear</button>
+          </div>
+        </div>
+        {mostrarSubs && subs.length > 0 && (
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 8, background: 'var(--bg)', padding: '0.5rem', borderRadius: 6 }}>
+            {subs.map(s => (
+              <div key={s.id} style={{ marginBottom: 4 }}>
+                <strong>{s.proveedor}</strong> · desde {new Date(s.creacion).toLocaleDateString('es-ES')}
+              </div>
+            ))}
+          </div>
+        )}
         {mensaje && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4 }}>{mensaje}</p>}
         <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 8, fontStyle: 'italic' }}>
           💡 En iPhone solo funcionan si instalaste la web como app (Safari → Compartir → Añadir a pantalla de inicio) y la abres desde ahí, no desde Safari.

@@ -102,6 +102,40 @@ router.get('/suscripciones-count', async (req, res) => {
   }
 });
 
+// GET /api/push/suscripciones?sala=xxx — lista con el proveedor (Apple/Google) de cada sub
+router.get('/suscripciones', async (req, res) => {
+  try {
+    const { sala } = req.query;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const { data } = await supabaseAdmin
+      .from('suscripciones_push').select('id, usuario_id, endpoint, created_at');
+    const conProvider = (data || []).map(s => {
+      let proveedor = 'desconocido';
+      if (s.endpoint.includes('apple.com')) proveedor = 'iOS/Apple';
+      else if (s.endpoint.includes('googleapis.com') || s.endpoint.includes('firebase')) proveedor = 'Android/Google FCM';
+      else if (s.endpoint.includes('mozilla')) proveedor = 'Firefox';
+      return { id: s.id, usuario_id: s.usuario_id, proveedor, creacion: s.created_at, url: s.endpoint.slice(0, 60) };
+    });
+    res.json({ suscripciones: conProvider });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/push/reset?sala=xxx — borra TODAS las suscripciones
+// Útil si hay suscripciones antiguas corruptas
+router.post('/reset', async (req, res) => {
+  try {
+    const { sala } = req.body;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const { error } = await supabaseAdmin.from('suscripciones_push').delete().neq('id', '00000000-0000-0000-0000-000000000000');
+    if (error) throw error;
+    res.json({ ok: true, msg: 'Todas las suscripciones eliminadas. Volved a activarlas desde la app.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function notificarUsuario(usuarioId, titulo, cuerpo, url) {
   const { data: subs } = await supabaseAdmin
     .from('suscripciones_push')
