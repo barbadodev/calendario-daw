@@ -1,0 +1,6 @@
+{
+  "name": "calendario-daw-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "CLI para gestionar el calendario DAW"
+}
