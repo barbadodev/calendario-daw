@@ -26,7 +26,7 @@ app.use('/api', routerGlobal);                 // stats, sync/now, keepalive, pl
 app.use('/api/push', pushRouter);
 
 app.get('/api/health', (req, res) => {
-  res.json({ ok: true, name: 'Calendario DAW', version: '1.1.0' });
+  res.json({ ok: true, name: 'Calendario DAW', version: '1.2.0' });
 });
 
 // Página simple anti-cold-start que también es útil para verificar en navegador

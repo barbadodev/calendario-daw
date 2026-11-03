@@ -98,7 +98,7 @@ routerGlobal.get('/moodle-status', async (req, res) => {
   try {
     const { sala } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-    const { data } = await supabaseAdmin.from('config_grupo').select('valor').in('clave', ['moodle_sync', 'moodle_course_map']);
+    const { data } = await supabaseAdmin.from('config_grupo').select('clave, valor').in('clave', ['moodle_sync', 'moodle_course_map']);
     const sync = data?.find(d => d.clave === 'moodle_sync')?.valor || {};
     const mapa = data?.find(d => d.clave === 'moodle_course_map')?.valor || {};
     const ultimo = sync.last_ok ? new Date(sync.last_ok) : null;
