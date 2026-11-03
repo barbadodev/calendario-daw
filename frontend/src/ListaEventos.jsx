@@ -73,7 +73,12 @@ export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar
                       <span>{tipo.icono} {tipo.nombre}</span>
                       <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>
                       {!ev.todo_el_dia && <span>{format(parseISO(ev.fecha_inicio), 'HH:mm')}</span>}
-                      {ev.enlace && <span>🔗 enlace</span>}
+                      {ev.enlace && <a href={ev.enlace} target="_blank" rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{ color: 'var(--primary)', textDecoration: 'none' }}>🔗 enlace</a>}
+                      {ev.moodle_url && <a href={ev.moodle_url} target="_blank" rel="noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        style={{ color: 'var(--success)', textDecoration: 'none' }}>🎓 abrir curso</a>}
                     </div>
                   </div>
                 </div>

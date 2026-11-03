@@ -12,6 +12,7 @@ export default function Ajustes({ usuario, eventos }) {
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
   const [subs, setSubs] = useState([]);
   const [mostrarSubs, setMostrarSubs] = useState(false);
+  const [resumen, setResumen] = useState('');
 
   useEffect(() => {
     cargarUsuarios();
@@ -155,6 +156,16 @@ export default function Ajustes({ usuario, eventos }) {
     setProbandoNotif(false);
   }
 
+  async function generarResumen(dias) {
+    try {
+      const res = await fetch(`${API_URL}/api/resumen-semana?sala=${usuario.codigo_sala}&dias=${dias}`);
+      const data = await res.json();
+      setResumen(data.texto || 'Sin eventos');
+    } catch (err) {
+      setMensaje('❌ No se pudo generar el resumen');
+    }
+  }
+
   function urlBase64ToUint8Array(base64) {
     const padding = '='.repeat((4 - base64.length % 4) % 4);
     const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -249,6 +260,45 @@ export default function Ajustes({ usuario, eventos }) {
       </div>
 
       <div className="ajustes-card">
+        <h3>📤 Compartir con el grupo</h3>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+          Genera un resumen en texto de vuestros próximos días, listo para pegar en el WhatsApp de clase.
+        </p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          <button className="btn" onClick={() => generarResumen(3)}>Próximos 3 días</button>
+          <button className="btn" onClick={() => generarResumen(7)}>Semana</button>
+          <button className="btn" onClick={() => generarResumen(14)}>2 semanas</button>
+        </div>
+        {resumen && (
+          <div style={{ marginTop: '0.75rem' }}>
+            <textarea
+              readOnly value={resumen}
+              onFocus={e => e.target.select()}
+              style={{
+                width: '100%', minHeight: '11rem', background: 'var(--bg)', color: 'var(--text)',
+                border: '1px solid var(--border)', borderRadius: 6, padding: '0.7rem',
+                fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap',
+              }}
+            />
+            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+              <button className="btn btn-filled" onClick={() => navigator.clipboard.writeText(resumen).then(() => setMensaje('✅ Resumen copiado'))}>Copiar</button>
+              <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(resumen)}`} target="_blank" rel="noreferrer"
+                style={{ textDecoration: 'none', textAlign: 'center' }}>Abrir en WhatsApp</a>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="ajustes-card">
+        <h3>💾 Copia de seguridad</h3>
+        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
+          Descarga un JSON con todos los eventos, notas y configuración. Útil por si se rompe algo o queréis guardar el curso.
+        </p>
+        <a className="btn" href={`${API_URL}/api/backup?sala=${usuario.codigo_sala}`} download
+          style={{ textDecoration: 'none', display: 'inline-block' }}>⬇️ Descargar backup</a>
+      </div>
+
+      <div className="ajustes-card">
         <h3>ℹ️ Info</h3>
         <div className="ajustes-item">
           <span className="ajustes-item-label">Código de sala</span>
@@ -260,7 +310,7 @@ export default function Ajustes({ usuario, eventos }) {
         </div>
         <div className="ajustes-item">
           <span className="ajustes-item-label">Versión</span>
-          <span className="ajustes-item-valor">1.1.0</span>
+          <span className="ajustes-item-valor">1.2.0</span>
         </div>
       </div>
     </div>

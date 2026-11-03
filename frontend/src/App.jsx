@@ -7,7 +7,9 @@ import ModalEvento from './ModalEvento.jsx';
 import Ajustes from './Ajustes.jsx';
 import Estadisticas from './Estadisticas.jsx';
 import NotasModulo from './NotasModulo.jsx';
+import PlanEstudio from './PlanEstudio.jsx';
 import ContadorProximo from './ContadorProximo.jsx';
+import BannerMoodle from './BannerMoodle.jsx';
 import { supabase } from './supabase.js';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -27,37 +29,50 @@ export function getModulo(id) {
   return MODULOS.find(m => m.id === id) || { id, nombre: id?.toUpperCase() || 'OTRO', color: '#6b7280' };
 }
 
-function App() {
+export default function App() {
   const [usuario, setUsuario] = useState(null);
-  const [vista, setVista] = useState('mes');
+  const [vista, setVista] = useState(() => localStorage.getItem('caldaw_vista') || 'semana');
   const [eventos, setEventos] = useState([]);
   const [filtroModulo, setFiltroModulo] = useState('todos');
+  const [soloPendientes, setSoloPendientes] = useState(() => localStorage.getItem('caldaw_pend') === '1');
   const [modalAbierto, setModalAbierto] = useState(false);
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [fechaNueva, setFechaNueva] = useState(null);
+  const [eventoDestacado, setEventoDestacado] = useState(null);
 
+  // Recuperar sesión y abrir deep-link ?evento=xxx (desde notificación)
   useEffect(() => {
     const guardado = localStorage.getItem('usuario');
     if (guardado) setUsuario(JSON.parse(guardado));
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('evento')) setEventoDestacado(params.get('evento'));
   }, []);
+
+  useEffect(() => { localStorage.setItem('caldaw_vista', vista); }, [vista]);
+  useEffect(() => { localStorage.setItem('caldaw_pend', soloPendientes ? '1' : '0'); }, [soloPendientes]);
 
   useEffect(() => {
     if (!usuario) return;
     cargarEventos();
-
     const channel = supabase
       .channel('eventos-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, cargarEventos)
       .subscribe();
-
     return () => supabase.removeChannel(channel);
   }, [usuario]);
 
+  // Abrir el evento que venía en el enlace de la notificación
+  useEffect(() => {
+    if (!eventoDestacado || eventos.length === 0) return;
+    const ev = eventos.find(e => e.id === eventoDestacado);
+    if (ev) { setEventoSeleccionado(ev); setModalAbierto(true); }
+    setEventoDestacado(null);
+    window.history.replaceState({}, '', window.location.pathname);
+  }, [eventoDestacado, eventos]);
+
   async function cargarEventos() {
     try {
-      const { data, error } = await supabase
-        .from('eventos').select('*')
-        .order('fecha_inicio', { ascending: true });
+      const { data, error } = await supabase.from('eventos').select('*').order('fecha_inicio', { ascending: true });
       if (!error && data) setEventos(data);
     } catch (err) { console.error(err); }
   }
@@ -91,7 +106,6 @@ function App() {
   }
 
   async function toggleCompletar(id, valorActual) {
-    // Actualización optimista
     setEventos(prev => prev.map(e => e.id === id ? { ...e, completado: !valorActual } : e));
     await fetch(`${API_URL}/api/eventos/${id}/completar`, {
       method: 'POST',
@@ -108,30 +122,19 @@ function App() {
     });
     if (res.ok) {
       const { evento } = await res.json();
-      setModalAbierto(false);
-      cargarEventos();
       setEventoSeleccionado(evento);
-      setModalAbierto(true);
+      cargarEventos();
     }
   }
 
-  function abrirModalCrear(fecha = null) {
-    setFechaNueva(fecha); setEventoSeleccionado(null); setModalAbierto(true);
-  }
-  function abrirModalEditar(ev) {
-    setEventoSeleccionado(ev); setFechaNueva(null); setModalAbierto(true);
-  }
-
-  function cerrarSesion() {
-    localStorage.removeItem('usuario');
-    setUsuario(null);
-  }
+  function abrirModalCrear(fecha = null) { setFechaNueva(fecha); setEventoSeleccionado(null); setModalAbierto(true); }
+  function abrirModalEditar(ev) { setEventoSeleccionado(ev); setFechaNueva(null); setModalAbierto(true); }
+  function cerrarSesion() { localStorage.removeItem('usuario'); setUsuario(null); }
 
   if (!usuario) return <Login onLogin={setUsuario} />;
 
-  const eventosFiltrados = filtroModulo === 'todos'
-    ? eventos
-    : eventos.filter(e => e.modulo_id === filtroModulo);
+  let eventosVista = filtroModulo === 'todos' ? eventos : eventos.filter(e => e.modulo_id === filtroModulo);
+  if (soloPendientes) eventosVista = eventosVista.filter(e => !e.completado);
 
   return (
     <>
@@ -144,14 +147,12 @@ function App() {
       </header>
 
       <ContadorProximo eventos={eventos} />
+      <BannerMoodle sala={usuario.codigo_sala} />
 
       <nav className="view-tabs">
-        <button className={`view-tab ${vista === 'mes' ? 'active' : ''}`} onClick={() => setVista('mes')}>Mes</button>
-        <button className={`view-tab ${vista === 'semana' ? 'active' : ''}`} onClick={() => setVista('semana')}>Semana</button>
-        <button className={`view-tab ${vista === 'lista' ? 'active' : ''}`} onClick={() => setVista('lista')}>Lista</button>
-        <button className={`view-tab ${vista === 'stats' ? 'active' : ''}`} onClick={() => setVista('stats')}>Stats</button>
-        <button className={`view-tab ${vista === 'notas' ? 'active' : ''}`} onClick={() => setVista('notas')}>Notas</button>
-        <button className={`view-tab ${vista === 'ajustes' ? 'active' : ''}`} onClick={() => setVista('ajustes')}>Ajustes</button>
+        {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['plan','Plan'],['stats','Stats'],['notas','Notas']].map(([id, label]) => (
+          <button key={id} className={`view-tab ${vista === id ? 'active' : ''}`} onClick={() => setVista(id)}>{label}</button>
+        ))}
       </nav>
 
       <div className="filtros-bar">
@@ -163,16 +164,20 @@ function App() {
             style={filtroModulo === m.id ? { background: m.color, borderColor: m.color } : {}}
             onClick={() => setFiltroModulo(m.id)}>{m.nombre}</button>
         ))}
+        <button className={`filtro-chip ${soloPendientes ? 'active' : ''}`}
+          style={soloPendientes ? { background: '#10b981', borderColor: '#10b981' } : {}}
+          onClick={() => setSoloPendientes(v => !v)}>✓ Pendientes</button>
       </div>
 
-      {vista === 'mes' && <Calendario eventos={eventosFiltrados} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
-      {vista === 'semana' && <VistaSemanal eventos={eventosFiltrados} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
-      {vista === 'lista' && <ListaEventos eventos={eventosFiltrados} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
+      {vista === 'mes' && <Calendario eventos={eventosVista} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
+      {vista === 'semana' && <VistaSemanal eventos={eventosVista} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
+      {vista === 'lista' && <ListaEventos eventos={eventosVista} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
+      {vista === 'plan' && <PlanEstudio usuario={usuario} />}
       {vista === 'stats' && <Estadisticas usuario={usuario} eventos={eventos} />}
       {vista === 'notas' && <NotasModulo usuario={usuario} />}
       {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
 
-      {(vista === 'mes' || vista === 'lista' || vista === 'semana') && (
+      {['mes','semana','lista'].includes(vista) && (
         <button className="fab" onClick={() => abrirModalCrear()}>+</button>
       )}
 
@@ -191,5 +196,3 @@ function App() {
     </>
   );
 }
-
-export default App;

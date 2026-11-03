@@ -85,7 +85,6 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
           </h2>
           <button className="btn-icon" onClick={onCerrar}>✕</button>
         </div>
-
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <label>Título</label>
@@ -119,6 +118,15 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
             <label>Enlace asociado (opcional)</label>
             <input type="url" value={enlace} onChange={e => setEnlace(e.target.value)}
               placeholder="https://moodle.../practica3" />
+
+            {esOrigenMoodle && evento.moodle_url && (
+              <div style={{ marginTop: '0.75rem' }}>
+                <a href={evento.moodle_url} target="_blank" rel="noreferrer"
+                  className="btn btn-filled" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
+                  🎓 Abrir el curso en Moodle
+                </a>
+              </div>
+            )}
 
             <label>Descripción / apuntes</label>
             {esOrigenMoodle && descripcion ? (

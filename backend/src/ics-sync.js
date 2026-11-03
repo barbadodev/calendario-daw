@@ -2,6 +2,14 @@ import './load-env.js';
 import ical from 'node-ical';
 import { supabaseAdmin } from './db.js';
 
+const BASE_MOODLE = (() => {
+  try {
+    const u = new URL(process.env.MOODLE_ICAL_URL || '');
+    return `${u.protocol}//${u.host}/centros/cordoba`;
+  } catch { return null; }
+})();
+
+/** Patrones para el PRIMER contacto con un curso. Luego se memoriza su ID. */
 const PATRONES_MODULO = [
   { id: 'dwec', patrones: [/\bdwec?\b/i, /\bjavascript\b/i, /\bhtml\b/i, /\bcss\b/i, /\bdom\b/i, /\bentorno cliente\b/i, /\breact\b/i, /\bvue\b/i, /\bbootstrap\b/i, /\bxml\b/i] },
   { id: 'dwes', patrones: [/\bdwes?\b/i, /\bphp\b/i, /\bservidor\b/i, /\blaravel\b/i, /\bmariadb\b/i, /\bmysql\b/i, /\bsql\b/i, /\bbbdd\b/i, /\bentorno servidor\b/i, /\bcookie/i] },
@@ -15,53 +23,27 @@ const PATRONES_MODULO = [
 
 function quitarUrls(txt) { return (txt || '').replace(/https?:\/\/\S+/g, ' '); }
 
-/**
- * Limpia la descripción que manda Moodle:
- * - Convierte HTML a texto plano
- * - Colapsa espacios/tabs/saltos de línea múltiples
- * - Quita los "Links:" de referencia [n] con URLs que van al final
- */
+/** Convierte la descripción HTML de Moodle en texto plano legible. */
 function limpiarDescripcion(raw) {
   if (!raw) return null;
   let t = String(raw);
-
-  // Quitar bloques "Links:" o "References:" con URLs al final
   t = t.replace(/\n\s*Links?:[\s\S]*$/i, '');
   t = t.replace(/\n-{2,}\s*\[1\][\s\S]*$/i, '');
-
-  // Convertir entidades HTML
   t = t
-    .replace(/&amp;/gi, '&')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/&rsquo;/gi, "'")
-    .replace(/&lsquo;/gi, "'")
-    .replace(/&mdash;/gi, '—')
-    .replace(/&ndash;/gi, '–')
-    .replace(/&hellip;/gi, '…');
-
-  // Convertir algunos tags a saltos
+    .replace(/&amp;/gi, '&').replace(/&nbsp;/gi, ' ').replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;/gi, "'")
+    .replace(/&rsquo;/gi, "'").replace(/&lsquo;/gi, "'").replace(/&mdash;/gi, '—')
+    .replace(/&ndash;/gi, '–').replace(/&hellip;/gi, '…');
   t = t.replace(/<br\s*\/?>/gi, '\n');
   t = t.replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n');
   t = t.replace(/<li[^>]*>/gi, '  • ');
   t = t.replace(/<[^>]+>/g, '');
-
-  // Normalizar tabs y espacios múltiples
-  t = t.replace(/\t/g, '  ');
-  t = t.replace(/ {3,}/g, ' ');
-  t = t.replace(/\n{3,}/g, '\n\n');
-  t = t.replace(/^\s+|\s+$/g, '');
-
-  // Cortar descripciones kilométricas
-  if (t.length > 3000) t = t.slice(0, 3000) + '\n\n… (descripción larga, abre el enlace en Moodle)';
-
+  t = t.replace(/\t/g, '  ').replace(/ {3,}/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+  if (t.length > 3000) t = t.slice(0, 3000) + '\n\n… (descripción larga, abre el curso en Moodle)';
   return t || null;
 }
 
-function detectarModulo(ev) {
+function detectarPorTexto(ev) {
   const titulo = quitarUrls(ev.summary);
   for (const { id, patrones } of PATRONES_MODULO) {
     if (patrones.some(p => p.test(titulo))) return id;
@@ -70,7 +52,7 @@ function detectarModulo(ev) {
   for (const { id, patrones } of PATRONES_MODULO) {
     if (patrones.some(p => p.test(desc))) return id;
   }
-  return 'otro';
+  return null;
 }
 
 function detectarTipo(ev) {
@@ -84,132 +66,162 @@ function detectarTipo(ev) {
   return 'otro';
 }
 
-/**
- * Fusiona eventos "Se abre X" + "Se cierra X" en un solo "X (abierto-del-al-cerrado)".
- * Devuelve lista limpia lista para insertar/update.
- */
+/** Fusiona "Se abre X" + "Se cierra X" en un único evento con ventana de tiempo. */
 function fusionarPares(eventosMoodle) {
-  const pares = new Map(); // key: título base sin "se abre"/"se cierra" → { abre, cierra }
+  const pares = new Map();
   const sueltos = [];
-
   for (const ev of eventosMoodle) {
     const t = (ev.summary || '').trim();
-    const mAbre = t.match(/^se\s+abre\s+(.+)$/i);
-    const mCierra = t.match(/^se\s+cierra\s+(.+)$/i);
-    if (mAbre) {
-      const key = mAbre[1].trim();
-      if (!pares.has(key)) pares.set(key, {});
-      pares.get(key).abre = { ...ev, base: key };
-    } else if (mCierra) {
-      const key = mCierra[1].trim();
-      if (!pares.has(key)) pares.set(key, {});
-      pares.get(key).cierra = { ...ev, base: key };
+    const abre = t.match(/^se\s+abre\s+(.+)$/i);
+    const cierra = t.match(/^se\s+cierra\s+(.+)$/i);
+    if (abre) {
+      const k = abre[1].trim();
+      pares.set(k, { ...(pares.get(k) || {}), abre: { ...ev, base: k } });
+    } else if (cierra) {
+      const k = cierra[1].trim();
+      pares.set(k, { ...(pares.get(k) || {}), cierra: { ...ev, base: k } });
     } else {
       sueltos.push(ev);
     }
   }
-
-  const fusionados = [];
+  const out = [...sueltos];
   for (const [base, { abre, cierra }] of pares) {
     if (abre && cierra) {
-      // Crear evento fusionado
-      fusionados.push({
+      out.push({
         summary: base,
         description: abre.description || cierra.description,
-        start: abre.start,   // fecha de apertura (inicio de ventana)
-        end: cierra.start,   // fecha de cierre (fin de ventana)
-        uid: `fused-${abre.uid}-${cierra.uid}`,
+        start: abre.start,
+        end: cierra.start,
+        uid: `fused-${abre.uid}__${cierra.uid}`,
+        categories: abre.categories || cierra.categories,
         _fusionado: true,
-        _ventana: true,
-        _abreUid: abre.uid,
-        _cierraUid: cierra.uid,
-        datetype: 'date-time',
       });
     } else {
-      // Solo uno de los dos
-      const solo = abre || cierra;
-      sueltos.push(solo);
+      out.push(abre || cierra);
     }
   }
-  return [...sueltos, ...fusionados];
+  return out;
+}
+
+// --- Estado de sincronización y mapa de cursos (persistidos en config_grupo) ---
+async function leerConfig(clave, porDefecto) {
+  const { data } = await supabaseAdmin.from('config_grupo').select('valor').eq('clave', clave).single();
+  return data?.valor ?? porDefecto;
+}
+async function escribirConfig(clave, valor) {
+  await supabaseAdmin.from('config_grupo')
+    .upsert({ clave, valor, updated_at: new Date().toISOString() }, { onConflict: 'clave' });
 }
 
 async function sincronizarFeed() {
   const url = process.env.MOODLE_ICAL_URL;
   if (!url) {
-    console.log('⚠️  MOODLE_ICAL_URL no configurada, omitiendo sincronización');
+    console.log('⚠️  MOODLE_ICAL_URL no configurada');
     return;
   }
-
   try {
     const data = await ical.async.fromURL(url);
-    const rawEvents = Object.values(data).filter(e => e.type === 'VEVENT');
-    const eventos = fusionarPares(rawEvents);
+    const raw = Object.values(data).filter(e => e.type === 'VEVENT');
+    const eventos = fusionarPares(raw);
+    const cursoMap = await leerConfig('moodle_course_map', {});
+    let nuevosCursos = 0;
 
-    console.log(`📥 Moodle: ${rawEvents.length} crudos → ${eventos.length} tras fusionar aperturas/cierres`);
+    console.log(`📥 Moodle: ${raw.length} crudos → ${eventos.length} tras fusionar`);
     let creados = 0, actualizados = 0;
-
     const uidsVistos = new Set();
 
     for (const ev of eventos) {
       const uid = ev.uid;
       uidsVistos.add(uid);
-      const inicio = ev.start;
-      const fin = ev.end || ev.start;
+      const inicio = ev.start, fin = ev.end || ev.start;
       if (!inicio) continue;
 
-      const modId = detectarModulo(ev);
-      const tipoId = detectarTipo(ev);
+      const courseId = String((Array.isArray(ev.categories) ? ev.categories[0] : ev.categories) || '');
+      let modId = cursoMap[courseId] || null;
+      if (!modId) {
+        modId = detectarPorTexto(ev);
+        if (modId && courseId) { cursoMap[courseId] = modId; nuevosCursos++; }
+      }
+      const moduloFinal = modId || 'otro';
+
+      const moodleUrl = BASE_MOODLE && courseId
+        ? `${BASE_MOODLE}/course/view.php?id=${courseId}`
+        : (ev.url || null);
 
       const { data: existentes } = await supabaseAdmin
-        .from('eventos')
-        .select('id, modulo_id, tipo_id, titulo')
+        .from('eventos').select('id, modulo_id, tipo_id, titulo')
         .eq('moodle_uid', uid).limit(1);
 
       const payload = {
         titulo: (ev.summary || 'Evento Moodle').substring(0, 200),
         descripcion: limpiarDescripcion(ev.description),
-        modulo_id: modId,
-        tipo_id: tipoId,
+        modulo_id: moduloFinal,
+        tipo_id: detectarTipo(ev),
         fecha_inicio: inicio.toISOString(),
         fecha_fin: fin.toISOString(),
         todo_el_dia: ev.datetype === 'date',
         origen: 'moodle',
         moodle_uid: uid,
-        moodle_url: ev.url || null,
-        revisar: modId === 'otro',
+        moodle_url: moodleUrl,
+        moodle_course_id: courseId || null,
+        revisar: !modId,
       };
 
-      if (existentes && existentes.length > 0) {
+      if (existentes?.length) {
         const ex = existentes[0];
-        const cambio = ex.modulo_id !== modId || ex.tipo_id !== tipoId || ex.titulo !== payload.titulo;
+        if (ex.modulo_id !== payload.modulo_id || ex.tipo_id !== payload.tipo_id || ex.titulo !== payload.titulo) actualizados++;
         await supabaseAdmin.from('eventos').update(payload).eq('moodle_uid', uid);
-        if (cambio) actualizados++;
       } else {
         await supabaseAdmin.from('eventos').insert(payload);
         creados++;
       }
     }
 
-    // Eliminar eventos de Moodle que ya no están en el feed
-    const { data: enDb } = await supabaseAdmin
-      .from('eventos').select('id, moodle_uid').eq('origen', 'moodle');
+    // Dar de baja eventos de Moodle que ya no existen
+    const { data: enDb } = await supabaseAdmin.from('eventos').select('id, moodle_uid').eq('origen', 'moodle');
+    let borrados = 0;
     for (const e of enDb || []) {
       if (e.moodle_uid && !uidsVistos.has(e.moodle_uid)) {
         await supabaseAdmin.from('eventos').delete().eq('id', e.id);
+        borrados++;
       }
     }
 
-    console.log(`✅ Moodle sincronizado (${creados} nuevos, ${actualizados} reclasificados)`);
+    if (nuevosCursos > 0) {
+      await escribirConfig('moodle_course_map', cursoMap);
+      console.log(`🧠 Nuevo curso reconocido: ${JSON.stringify(cursoMap)}`);
+    }
+
+    await escribirConfig('moodle_sync', {
+      last_ok: new Date().toISOString(),
+      eventos: eventos.length,
+      creados, actualizados, borrados,
+      error: null,
+    });
+
+    console.log(`✅ Moodle OK (${creados} nuevos, ${actualizados} reclasificados, ${borrados} dados de baja)`);
   } catch (err) {
     console.error('❌ Error sincronizando Moodle:', err.message);
+    const prev = await leerConfig('moodle_sync', {});
+    await escribirConfig('moodle_sync', { ...prev, last_error: new Date().toISOString(), error: err.message });
+    // Avisar al grupo solo la primera vez que rompe (evita spam)
+    if (!prev?.error) {
+      try {
+        const { notificarCambio } = await import('./push.js');
+        await notificarCambio({
+          exceptoUsuarioId: null,
+          titulo: '⚠️ Moodle deja de sincronizar',
+          cuerpo: 'El acceso al calendario de Moodle falló. Antonio debe regenerar la URL del calendario.',
+        });
+      } catch { /* no romper el arranque */ }
+    }
   }
 }
 
 export { sincronizarFeed };
 
 export function iniciarSincronizacionMoodle() {
-  setTimeout(() => sincronizarFeed(), 20_000);
+  setTimeout(() => sincronizarFeed(), 15_000);
   setInterval(() => sincronizarFeed(), 15 * 60 * 1000);
   import('./push.js').then(m => {
     setInterval(() => m.enviarNotificacionesRecordatorio(), 5 * 60 * 1000);

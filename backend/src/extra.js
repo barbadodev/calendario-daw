@@ -3,20 +3,17 @@ import { Router } from 'express';
 import { supabaseAdmin } from './db.js';
 import { sincronizarFeed } from './ics-sync.js';
 
-// === Rutas extra de eventos (montadas en /api/eventos) ===
 export const routerEventosExtra = Router();
 
+// POST /api/eventos/:id/completar
 routerEventosExtra.post('/:id/completar', async (req, res) => {
   try {
     const { sala, valor } = req.body;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-
     const { data, error } = await supabaseAdmin
       .from('eventos')
       .update({ completado: !!valor, updated_at: new Date().toISOString() })
-      .eq('id', req.params.id)
-      .select()
-      .single();
+      .eq('id', req.params.id).select().single();
     if (error) throw error;
     res.json({ evento: data });
   } catch (err) {
@@ -25,38 +22,29 @@ routerEventosExtra.post('/:id/completar', async (req, res) => {
   }
 });
 
+// POST /api/eventos/:id/duplicar
 routerEventosExtra.post('/:id/duplicar', async (req, res) => {
   try {
     const { sala } = req.body;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-
-    const { data: original } = await supabaseAdmin
-      .from('eventos').select('*').eq('id', req.params.id).single();
-    if (!original) return res.status(404).json({ error: 'No existe' });
-
-    const nuevo = {
-      titulo: original.titulo,
-      descripcion: original.descripcion,
-      modulo_id: original.modulo_id,
-      tipo_id: original.tipo_id,
-      fecha_inicio: new Date(new Date(original.fecha_inicio).getTime() + 24 * 60 * 60 * 1000).toISOString(),
-      fecha_fin: original.fecha_fin ? new Date(new Date(original.fecha_fin).getTime() + 24 * 60 * 60 * 1000).toISOString() : null,
-      todo_el_dia: original.todo_el_dia,
-      origen: 'manual',
-      creado_por: original.creado_por,
-      enlace: original.enlace,
-      parent_evento: original.id,
-    };
-    const { data: creado, error } = await supabaseAdmin.from('eventos').insert(nuevo).select().single();
+    const { data: o } = await supabaseAdmin.from('eventos').select('*').eq('id', req.params.id).single();
+    if (!o) return res.status(404).json({ error: 'No existe' });
+    const day = 24 * 60 * 60 * 1000;
+    const { data, error } = await supabaseAdmin.from('eventos').insert({
+      titulo: o.titulo, descripcion: o.descripcion, modulo_id: o.modulo_id, tipo_id: o.tipo_id,
+      fecha_inicio: new Date(new Date(o.fecha_inicio).getTime() + day).toISOString(),
+      fecha_fin: o.fecha_fin ? new Date(new Date(o.fecha_fin).getTime() + day).toISOString() : null,
+      todo_el_dia: o.todo_el_dia, origen: 'manual', creado_por: o.creado_por,
+      enlace: o.enlace, parent_evento: o.id,
+    }).select().single();
     if (error) throw error;
-    res.json({ evento: creado });
+    res.json({ evento: data });
   } catch (err) {
     console.error('Error duplicar:', err);
     res.status(500).json({ error: 'Error interno' });
   }
 });
 
-// === Rutas globales (montadas en /api) ===
 export const routerGlobal = Router();
 
 // GET /api/stats
@@ -64,30 +52,23 @@ routerGlobal.get('/stats', async (req, res) => {
   try {
     const { sala } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-
     const { data: eventos } = await supabaseAdmin.from('eventos').select('*');
     const evs = eventos || [];
-
     const ahora = new Date();
     const finMes = new Date(ahora.getFullYear(), ahora.getMonth() + 1, 1);
-    const porModulo = {};
-    const porTipo = {};
+    const porModulo = {}, porTipo = {};
     let pasados = 0, proximos7 = 0, entregados = 0, pendientesMes = 0;
-
     for (const e of evs) {
       porModulo[e.modulo_id] = (porModulo[e.modulo_id] || 0) + 1;
       porTipo[e.tipo_id] = (porTipo[e.tipo_id] || 0) + 1;
       const f = new Date(e.fecha_inicio);
       if (f < ahora) pasados++;
-      else if (f < new Date(ahora.getTime() + 7 * 24 * 60 * 60 * 1000)) proximos7++;
+      else if (f < new Date(ahora.getTime() + 7 * 86400000)) proximos7++;
       if (e.completado) entregados++;
       if (!e.completado && f >= ahora && f < finMes) pendientesMes++;
     }
-
     res.json({
-      total: evs.length,
-      porModulo, porTipo,
-      pasados, proximos7, entregados, pendientesMes,
+      total: evs.length, porModulo, porTipo, pasados, proximos7, entregados, pendientesMes,
       tasaCompletado: evs.length ? Math.round((entregados / evs.length) * 100) : 0,
     });
   } catch (err) {
@@ -96,7 +77,7 @@ routerGlobal.get('/stats', async (req, res) => {
   }
 });
 
-// POST /api/sync/now  — fuerza sincronización Moodle
+// POST /api/sync/now
 routerGlobal.post('/sync/now', async (req, res) => {
   try {
     const { sala } = req.body;
@@ -109,40 +90,126 @@ routerGlobal.post('/sync/now', async (req, res) => {
   }
 });
 
-// GET /api/keepalive — endpoint mínimo para evitar cold starts
+// GET /api/keepalive
 routerGlobal.get('/keepalive', (req, res) => res.json({ ok: true }));
 
-// GET /api/plan-estudio — semanas próximas con carga
+// GET /api/moodle-status — salud de la sincronización con Moodle
+routerGlobal.get('/moodle-status', async (req, res) => {
+  try {
+    const { sala } = req.query;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const { data } = await supabaseAdmin.from('config_grupo').select('valor').in('clave', ['moodle_sync', 'moodle_course_map']);
+    const sync = data?.find(d => d.clave === 'moodle_sync')?.valor || {};
+    const mapa = data?.find(d => d.clave === 'moodle_course_map')?.valor || {};
+    const ultimo = sync.last_ok ? new Date(sync.last_ok) : null;
+    const horasSinSync = ultimo ? (Date.now() - ultimo.getTime()) / 3600000 : null;
+    res.json({
+      ok: !sync.error && horasSinSync !== null && horasSinSync < 26,
+      last_ok: sync.last_ok || null,
+      last_error: sync.last_error || null,
+      error_actual: sync.error || null,
+      horas_desde_sync: horasSinSync === null ? null : Math.round(horasSinSync * 10) / 10,
+      eventos: sync.eventos || 0,
+      cursos_reconocidos: mapa,
+    });
+  } catch (err) {
+    console.error('Error moodle-status:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// GET /api/resumen-semana — texto listo para pegar en WhatsApp
+routerGlobal.get('/resumen-semana', async (req, res) => {
+  try {
+    const { sala, dias } = req.query;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const n = Math.min(parseInt(dias || '7', 10), 31);
+    const desde = new Date(); desde.setHours(0, 0, 0, 0);
+    const hasta = new Date(desde.getTime() + n * 86400000);
+    const { data: eventos } = await supabaseAdmin
+      .from('eventos').select('*')
+      .gte('fecha_inicio', desde.toISOString())
+      .lt('fecha_inicio', hasta.toISOString())
+      .order('fecha_inicio', { ascending: true });
+
+    const NOMBRES = { ipe: 'IPE', dwec: 'DWEC', dwes: 'DWES', daw: 'DAW', diw: 'DIW', en: 'Inglés', opt: 'Optativa', proy: 'Proyecto', otro: 'Otro' };
+    const porDia = {};
+    for (const e of eventos || []) {
+      const f = new Date(e.fecha_inicio);
+      const k = f.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'short' });
+      (porDia[k] ||= []).push(e);
+    }
+    const totalEx = (eventos || []).filter(e => e.tipo_id === 'examen').length;
+    const totalEn = (eventos || []).filter(e => e.tipo_id === 'entrega').length;
+
+    let txt = `📅 *Calendario DAW* — próximos ${n} días\n`;
+    txt += `📝 ${totalEx} exámenes · 📦 ${totalEn} entregas\n\n`;
+    if (!Object.keys(porDia).length) txt += '(Sin eventos) ✅\n';
+    for (const [d, evs] of Object.entries(porDia)) {
+      txt += `*${d.charAt(0).toUpperCase() + d.slice(1)}*\n`;
+      for (const e of evs) {
+        const icono = { examen: '📝', entrega: '📦', apunte: '📌', clase: '📚', reunion: '👥' }[e.tipo_id] || '⭐';
+        const hora = e.todo_el_dia ? '' : ` ${new Date(e.fecha_inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`;
+        const hecho = e.completado ? ' ✅' : '';
+        txt += `${icono} ${NOMBRES[e.modulo_id] || e.modulo_id}: ${e.titulo}${hora}${hecho}\n`;
+      }
+      txt += `\n`;
+    }
+    res.json({ texto: txt.trim(), eventos: (eventos || []).length });
+  } catch (err) {
+    console.error('Error resumen-semana:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// GET /api/backup — JSON con todos los datos (para descargar / versionar)
+routerGlobal.get('/backup', async (req, res) => {
+  try {
+    const { sala } = req.query;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const [ev, notas, notasMod, usuarios, config] = await Promise.all([
+      supabaseAdmin.from('eventos').select('*'),
+      supabaseAdmin.from('notas_evento').select('*'),
+      supabaseAdmin.from('notas_modulo').select('*'),
+      supabaseAdmin.from('usuarios').select('*'),
+      supabaseAdmin.from('config_grupo').select('*'),
+    ]);
+    const volcado = {
+      _meta: { generado: new Date().toISOString(), version: '1.1', origen: 'calendario-daw' },
+      eventos: ev.data || [], notas_evento: notas.data || [], notas_modulo: notasMod.data || [],
+      usuarios: usuarios.data || [], config: config.data || [],
+    };
+    res.setHeader('Content-Disposition', `attachment; filename="backup-caldaw-${Date.now()}.json"`);
+    res.json(volcado);
+  } catch (err) {
+    console.error('Error backup:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// GET /api/plan-estudio
 routerGlobal.get('/plan-estudio', async (req, res) => {
   try {
     const { sala } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-
-    const { data: eventos } = await supabaseAdmin
-      .from('eventos').select('*')
+    const { data: eventos } = await supabaseAdmin.from('eventos').select('*')
       .gte('fecha_inicio', new Date().toISOString())
       .order('fecha_inicio', { ascending: true });
-
     const semanas = {};
     for (const e of eventos || []) {
-      const f = new Date(e.fecha_inicio);
-      const iso = getISOWeek(f);
-      if (!semanas[iso]) semanas[iso] = [];
-      semanas[iso].push({
+      const iso = getISOWeek(new Date(e.fecha_inicio));
+      (semanas[iso] ||= []).push({
         id: e.id, titulo: e.titulo, fecha: e.fecha_inicio,
         tipo: e.tipo_id, modulo: e.modulo_id, completado: e.completado,
       });
     }
-
     const resumen = Object.entries(semanas).map(([semana, evs]) => ({
-      semana,
-      total: evs.length,
+      semana, total: evs.length,
       examenes: evs.filter(e => e.tipo === 'examen').length,
       entregas: evs.filter(e => e.tipo === 'entrega').length,
       cargaHorasEstimadas: evs.filter(e => e.tipo === 'examen').length * 6 + evs.filter(e => e.tipo === 'entrega').length * 4,
       eventos: evs,
     })).sort((a, b) => a.semana.localeCompare(b.semana));
-
     res.json({ semanas: resumen });
   } catch (err) {
     console.error('Error plan-estudio:', err);
@@ -150,19 +217,14 @@ routerGlobal.get('/plan-estudio', async (req, res) => {
   }
 });
 
-// === Notas por módulo ===
 export const routerNotasModulo = Router();
 
 routerNotasModulo.get('/:moduloId', async (req, res) => {
   try {
     const { sala } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-
-    const { data, error } = await supabaseAdmin
-      .from('notas_modulo').select('*, usuarios(nombre)')
-      .eq('modulo_id', req.params.moduloId)
-      .order('created_at', { ascending: false })
-      .limit(50);
+    const { data, error } = await supabaseAdmin.from('notas_modulo').select('*, usuarios(nombre)')
+      .eq('modulo_id', req.params.moduloId).order('created_at', { ascending: false }).limit(50);
     if (error) throw error;
     res.json({ notas: data || [] });
   } catch (err) {
@@ -176,13 +238,9 @@ routerNotasModulo.post('/:moduloId', async (req, res) => {
     const { sala, contenido, autor_id } = req.body;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
     if (!contenido?.trim()) return res.status(400).json({ error: 'Contenido vacío' });
-
-    const { data, error } = await supabaseAdmin
-      .from('notas_modulo').insert({
-        modulo_id: req.params.moduloId,
-        contenido: contenido.trim(),
-        autor_id: autor_id || null,
-      }).select().single();
+    const { data, error } = await supabaseAdmin.from('notas_modulo').insert({
+      modulo_id: req.params.moduloId, contenido: contenido.trim(), autor_id: autor_id || null,
+    }).select().single();
     if (error) throw error;
     res.json({ nota: data });
   } catch (err) {
@@ -191,27 +249,24 @@ routerNotasModulo.post('/:moduloId', async (req, res) => {
   }
 });
 
-// === Config del grupo (semana exámenes) ===
 export const routerConfig = Router();
 
 routerConfig.get('/semana-examen', async (req, res) => {
   try {
     const { sala } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-    const { data } = await supabaseAdmin.from('config_grupo').select('*').eq('clave', 'semana_examen').single();
+    const { data } = await supabaseAdmin.from('config_grupo').select('valor').eq('clave', 'semana_examen').single();
     res.json({ config: data?.valor || { desde: null, hasta: null } });
-  } catch (err) {
-    res.status(500).json({ error: 'Error interno' });
-  }
+  } catch (err) { res.status(500).json({ error: 'Error interno' }); }
 });
 
 routerConfig.post('/semana-examen', async (req, res) => {
   try {
     const { sala, desde, hasta } = req.body;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-    const { error } = await supabaseAdmin
-      .from('config_grupo')
-      .upsert({ clave: 'semana_examen', valor: { desde, hasta }, updated_at: new Date().toISOString() }, { onConflict: 'clave' });
+    const { error } = await supabaseAdmin.from('config_grupo').upsert(
+      { clave: 'semana_examen', valor: { desde, hasta }, updated_at: new Date().toISOString() },
+      { onConflict: 'clave' });
     if (error) throw error;
     res.json({ ok: true });
   } catch (err) {
