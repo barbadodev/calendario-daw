@@ -143,6 +143,33 @@ router.post('/reset', async (req, res) => {
   }
 });
 
+// Notifica al resto de usuarios que se ha creado/modificado/borrado algo
+export async function notificarCambio({ exceptoUsuarioId, titulo, cuerpo, url }) {
+  const { data: usuarios } = await supabaseAdmin
+    .from('usuarios').select('id').neq('id', exceptoUsuarioId || '00000000-0000-0000-0000-000000000000');
+
+  if (!usuarios || usuarios.length === 0) return { enviadas: 0 };
+
+  const payload = JSON.stringify({ titulo, cuerpo, url });
+  let enviadas = 0;
+
+  for (const u of usuarios) {
+    const { data: subs } = await supabaseAdmin
+      .from('suscripciones_push').select('id, datos').eq('usuario_id', u.id);
+    for (const s of subs || []) {
+      try {
+        await webpush.sendNotification(s.datos, payload);
+        enviadas++;
+      } catch (err) {
+        if (err.statusCode === 410) {
+          await supabaseAdmin.from('suscripciones_push').delete().eq('id', s.id);
+        }
+      }
+    }
+  }
+  return { enviadas };
+}
+
 async function notificarUsuario(usuarioId, titulo, cuerpo, url) {
   const { data: subs } = await supabaseAdmin
     .from('suscripciones_push')

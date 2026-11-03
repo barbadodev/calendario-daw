@@ -75,7 +75,7 @@ function App() {
     const res = await fetch(`${API_URL}/api/eventos/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, evento: eventoData }),
+      body: JSON.stringify({ sala: usuario.codigo_sala, evento: eventoData, usuarioId: usuario.id }),
     });
     if (res.ok) { setModalAbierto(false); setEventoSeleccionado(null); cargarEventos(); }
   }
@@ -85,7 +85,7 @@ function App() {
     const res = await fetch(`${API_URL}/api/eventos/${id}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala }),
+      body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id }),
     });
     if (res.ok) { setModalAbierto(false); setEventoSeleccionado(null); cargarEventos(); }
   }
