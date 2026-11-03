@@ -82,6 +82,11 @@ try {
   if (!res.ok) { console.error('❌ Error del servidor:', await res.text()); process.exit(1); }
   const data = await res.json();
   console.log('✅ Evento añadido');
+  if (data.avisados !== undefined) {
+    console.log(data.avisados > 0
+      ? `   👥 Avisados ${data.avisados} compañero(s)`
+      : '   ⚠️  Nadie tiene las notificaciones activas');
+  }
   console.log(`   📅 ${data.evento.titulo}`);
   console.log(`   🕐 ${new Date(data.evento.fecha_inicio).toLocaleString('es-ES')}`);
   console.log(`   🎓 ${data.evento.modulo_id.toUpperCase()} · ${data.evento.tipo_id}`);

@@ -909,3 +909,31 @@ input, textarea, select {
 @media (prefers-reduced-motion: reduce) {
   .modal-card { animation: none; }
 }
+
+/* ====== TOAST de confirmación en pantalla ====== */
+/* Va arriba para no tapar el botón + ni el contenido al hacer scroll */
+.toast {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: 4.25rem;
+  z-index: 200;
+  max-width: min(92vw, 26rem);
+  padding: 0.7rem 1rem;
+  border-radius: 10px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+  cursor: pointer;
+  animation: toast-entra .18s ease-out;
+}
+.toast-ok { border-left: 3px solid var(--success); }
+.toast-error { border-left: 3px solid var(--danger); }
+
+@keyframes toast-entra {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}

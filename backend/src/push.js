@@ -143,15 +143,17 @@ router.post('/reset', async (req, res) => {
   }
 });
 
-// Notifica al resto de usuarios que se ha creado/modificado/borrado algo
+// Notifica al resto de usuarios que se ha creado/modificado/borrado algo.
+// Devuelve cuántas PERSONAS (no dispositivos) recibieron el aviso.
 export async function notificarCambio({ exceptoUsuarioId, titulo, cuerpo, url }) {
   const { data: usuarios } = await supabaseAdmin
     .from('usuarios').select('id').neq('id', exceptoUsuarioId || '00000000-0000-0000-0000-000000000000');
 
-  if (!usuarios || usuarios.length === 0) return { enviadas: 0 };
+  if (!usuarios || usuarios.length === 0) return { enviadas: 0, personas: 0 };
 
   const payload = JSON.stringify({ titulo, cuerpo, url });
   let enviadas = 0;
+  const personas = new Set();
 
   for (const u of usuarios) {
     const { data: subs } = await supabaseAdmin
@@ -160,10 +162,36 @@ export async function notificarCambio({ exceptoUsuarioId, titulo, cuerpo, url })
       try {
         await webpush.sendNotification(s.datos, payload);
         enviadas++;
+        personas.add(u.id);
       } catch (err) {
         if (err.statusCode === 410) {
           await supabaseAdmin.from('suscripciones_push').delete().eq('id', s.id);
         }
+      }
+    }
+  }
+  return { enviadas, personas: personas.size };
+}
+
+/**
+ * Confirmación para QUIEN hizo la acción. Así tiene certeza de que
+ * se registró y de cuántos compañeros fueron avisados de verdad.
+ */
+export async function confirmarAccion({ usuarioId, titulo, cuerpo, url }) {
+  if (!usuarioId) return { enviadas: 0 };
+  const { data: subs } = await supabaseAdmin
+    .from('suscripciones_push').select('id, datos').eq('usuario_id', usuarioId);
+  if (!subs || subs.length === 0) return { enviadas: 0 };
+
+  const payload = JSON.stringify({ titulo, cuerpo, url });
+  let enviadas = 0;
+  for (const s of subs) {
+    try {
+      await webpush.sendNotification(s.datos, payload);
+      enviadas++;
+    } catch (err) {
+      if (err.statusCode === 410) {
+        await supabaseAdmin.from('suscripciones_push').delete().eq('id', s.id);
       }
     }
   }

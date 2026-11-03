@@ -6,7 +6,7 @@ import { useBloquearScroll } from './useEsMovil.js';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
-export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, onActualizar, onEliminar, onDuplicar, onCerrar }) {
+export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, onActualizar, onEliminar, onDuplicar, onAviso, onCerrar }) {
   const esEdicion = !!evento;
   const [titulo, setTitulo] = useState('');
   const [descripcion, setDescripcion] = useState('');
@@ -45,13 +45,21 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   async function guardarNota(e) {
     e.preventDefault();
     if (!nuevaNota.trim() || !evento) return;
-    await fetch(`${API_URL}/api/eventos/${evento.id}/notas`, {
+    const res = await fetch(`${API_URL}/api/eventos/${evento.id}/notas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sala: usuario.codigo_sala, contenido: nuevaNota.trim(), autor_id: usuario.id }),
     });
-    setNuevaNota('');
-    cargarNotas(evento.id);
+    if (res.ok) {
+      const d = await res.json();
+      setNuevaNota('');
+      cargarNotas(evento.id);
+      if (onAviso) {
+        onAviso(d.avisados > 0
+          ? `💬 Nota guardada · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
+          : '💬 Nota guardada · ⚠️ nadie tiene las notificaciones activas');
+      }
+    }
   }
 
   function handleSubmit(e) {

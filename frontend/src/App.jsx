@@ -39,6 +39,12 @@ export default function App() {
   const [eventoSeleccionado, setEventoSeleccionado] = useState(null);
   const [fechaNueva, setFechaNueva] = useState(null);
   const [eventoDestacado, setEventoDestacado] = useState(null);
+  const [aviso, setAviso] = useState(null);
+
+  function mostrarAviso(texto, tipo = 'ok') {
+    setAviso({ texto, tipo });
+    setTimeout(() => setAviso(null), 4500);
+  }
 
   // Recuperar sesión y abrir deep-link ?evento=xxx (desde notificación)
   useEffect(() => {
@@ -77,13 +83,25 @@ export default function App() {
     } catch (err) { console.error(err); }
   }
 
+  function textoAvisos(d) {
+    if (d.avisados === undefined) return '';
+    return d.avisados > 0
+      ? ` · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
+      : ' · ⚠️ nadie tiene las notificaciones activas';
+  }
+
   async function crearEvento(eventoData) {
     const res = await fetch(`${API_URL}/api/eventos`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sala: usuario.codigo_sala, evento: { ...eventoData, creado_por: usuario.id } }),
     });
-    if (res.ok) { setModalAbierto(false); cargarEventos(); }
+    if (res.ok) {
+      const d = await res.json();
+      setModalAbierto(false);
+      cargarEventos();
+      mostrarAviso('📅 Evento guardado' + textoAvisos(d));
+    } else mostrarAviso('❌ No se pudo guardar', 'error');
   }
 
   async function actualizarEvento(id, eventoData) {
@@ -92,7 +110,11 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sala: usuario.codigo_sala, evento: eventoData, usuarioId: usuario.id }),
     });
-    if (res.ok) { setModalAbierto(false); setEventoSeleccionado(null); cargarEventos(); }
+    if (res.ok) {
+      const d = await res.json();
+      setModalAbierto(false); setEventoSeleccionado(null); cargarEventos();
+      mostrarAviso('✅ Cambios guardados' + textoAvisos(d));
+    } else mostrarAviso('❌ No se pudieron guardar los cambios', 'error');
   }
 
   async function eliminarEvento(id) {
@@ -102,7 +124,11 @@ export default function App() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id }),
     });
-    if (res.ok) { setModalAbierto(false); setEventoSeleccionado(null); cargarEventos(); }
+    if (res.ok) {
+      const d = await res.json();
+      setModalAbierto(false); setEventoSeleccionado(null); cargarEventos();
+      mostrarAviso('🗑️ Evento eliminado' + textoAvisos(d));
+    }
   }
 
   async function toggleCompletar(id, valorActual) {
@@ -190,8 +216,15 @@ export default function App() {
           onActualizar={actualizarEvento}
           onEliminar={eliminarEvento}
           onDuplicar={duplicarEvento}
+          onAviso={mostrarAviso}
           onCerrar={() => setModalAbierto(false)}
         />
+      )}
+
+      {aviso && (
+        <div className={`toast toast-${aviso.tipo}`} onClick={() => setAviso(null)}>
+          {aviso.texto}
+        </div>
       )}
     </>
   );
