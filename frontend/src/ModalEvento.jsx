@@ -121,9 +121,25 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
               placeholder="https://moodle.../practica3" />
 
             <label>Descripción / apuntes</label>
-            <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)}
-              placeholder="Lo que dijo el profesor, temas, enlaces, detalles..."
-              disabled={esOrigenMoodle} />
+            {esOrigenMoodle && descripcion ? (
+              <div style={{
+                whiteSpace: 'pre-wrap',
+                background: 'var(--bg)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: '0.75rem',
+                fontSize: '0.8125rem',
+                lineHeight: '1.5',
+                maxHeight: '16rem',
+                overflowY: 'auto',
+                wordBreak: 'break-word',
+              }}>
+                {descripcion}
+              </div>
+            ) : (
+              <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)}
+                placeholder="Lo que dijo el profesor, temas, enlaces, detalles..." />
+            )}
 
             {esEdicion && (
               <div className="notas-section">

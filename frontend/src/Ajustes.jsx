@@ -174,7 +174,7 @@ export default function Ajustes({ usuario, eventos }) {
             <div key={u.id} className="ajustes-item">
               <span className="ajustes-item-label">{u.id === usuario.id ? `🟢 ${u.nombre} (tú)` : `⚪ ${u.nombre}`}</span>
               <span className="ajustes-item-valor">
-                {u.last_seen ? 'visto ' + new Date(u.last_seen).toLocaleDateString('es-ES') : ''}
+                {u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
               </span>
             </div>
           ))

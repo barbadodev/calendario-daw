@@ -15,6 +15,52 @@ const PATRONES_MODULO = [
 
 function quitarUrls(txt) { return (txt || '').replace(/https?:\/\/\S+/g, ' '); }
 
+/**
+ * Limpia la descripción que manda Moodle:
+ * - Convierte HTML a texto plano
+ * - Colapsa espacios/tabs/saltos de línea múltiples
+ * - Quita los "Links:" de referencia [n] con URLs que van al final
+ */
+function limpiarDescripcion(raw) {
+  if (!raw) return null;
+  let t = String(raw);
+
+  // Quitar bloques "Links:" o "References:" con URLs al final
+  t = t.replace(/\n\s*Links?:[\s\S]*$/i, '');
+  t = t.replace(/\n-{2,}\s*\[1\][\s\S]*$/i, '');
+
+  // Convertir entidades HTML
+  t = t
+    .replace(/&amp;/gi, '&')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&rsquo;/gi, "'")
+    .replace(/&lsquo;/gi, "'")
+    .replace(/&mdash;/gi, '—')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&hellip;/gi, '…');
+
+  // Convertir algunos tags a saltos
+  t = t.replace(/<br\s*\/?>/gi, '\n');
+  t = t.replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n');
+  t = t.replace(/<li[^>]*>/gi, '  • ');
+  t = t.replace(/<[^>]+>/g, '');
+
+  // Normalizar tabs y espacios múltiples
+  t = t.replace(/\t/g, '  ');
+  t = t.replace(/ {3,}/g, ' ');
+  t = t.replace(/\n{3,}/g, '\n\n');
+  t = t.replace(/^\s+|\s+$/g, '');
+
+  // Cortar descripciones kilométricas
+  if (t.length > 3000) t = t.slice(0, 3000) + '\n\n… (descripción larga, abre el enlace en Moodle)';
+
+  return t || null;
+}
+
 function detectarModulo(ev) {
   const titulo = quitarUrls(ev.summary);
   for (const { id, patrones } of PATRONES_MODULO) {
@@ -122,7 +168,7 @@ async function sincronizarFeed() {
 
       const payload = {
         titulo: (ev.summary || 'Evento Moodle').substring(0, 200),
-        descripcion: ev.description || null,
+        descripcion: limpiarDescripcion(ev.description),
         modulo_id: modId,
         tipo_id: tipoId,
         fecha_inicio: inicio.toISOString(),
