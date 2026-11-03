@@ -53,14 +53,11 @@ export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar
               return (
                 <div key={ev.id} className="evento-card" onClick={() => onEventoClick(ev)}>
                   <div
+                    className="evento-check"
                     onClick={(e) => { e.stopPropagation(); onToggleCompletar(ev.id, ev.completado); }}
                     style={{
-                      width: 22, height: 22, borderRadius: 4, flexShrink: 0,
                       background: ev.completado ? 'var(--success)' : 'transparent',
                       border: `2px solid ${ev.completado ? 'var(--success)' : 'var(--border)'}`,
-                      color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer',
-                      marginTop: 2,
                     }}
                     title="Marcar como completado">
                     {ev.completado ? '✓' : ''}

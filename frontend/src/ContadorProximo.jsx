@@ -21,24 +21,22 @@ export default function ContadorProximo({ eventos }) {
   const label = dias === 0 ? 'HOY' : dias === 1 ? 'MAÑANA' : `en ${dias} días`;
 
   return (
-    <div style={{
-      background: `linear-gradient(135deg, ${mod.color}22, ${mod.color}11)`,
-      borderLeft: `4px solid ${mod.color}`,
-      padding: '0.625rem 1rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-      fontSize: '0.875rem',
-    }}>
-      <span style={{ fontSize: '1.25rem' }}>⏰</span>
-      <div style={{ flex: 1 }}>
+    <div
+      className="contador-proximo"
+      style={{
+        background: `linear-gradient(135deg, ${mod.color}22, ${mod.color}11)`,
+        borderLeft: `4px solid ${mod.color}`,
+      }}
+    >
+      <span className="contador-icono">⏰</span>
+      <div className="contador-texto">
         <strong>{label}</strong> ·{' '}
         <span style={{ background: mod.color, color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
           {mod.nombre}
         </span>{' '}
         {prximo.titulo}
       </div>
-      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+      <div className="contador-fecha">
         {format(parseISO(prximo.fecha_inicio), 'd MMM HH:mm')}
       </div>
     </div>

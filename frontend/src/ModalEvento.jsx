@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MODULOS, TIPOS } from './modulos.js';
+import { useBloquearScroll } from './useEsMovil.js';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -72,10 +73,11 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   }
 
   const esOrigenMoodle = evento?.origen === 'moodle';
+  useBloquearScroll(true);
 
   return (
     <div className="modal-overlay" onClick={onCerrar}>
-      <div className="modal-card" onClick={e => e.stopPropagation()}>
+      <div className="modal-card" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>
             {esEdicion ? 'Editar evento' : 'Nuevo evento'}
