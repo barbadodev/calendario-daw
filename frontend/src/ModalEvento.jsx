@@ -132,6 +132,8 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
             {esOrigenMoodle && descripcion ? (
               <div style={{
                 whiteSpace: 'pre-wrap',
+                overflowWrap: 'anywhere',
+                wordBreak: 'break-word',
                 background: 'var(--bg)',
                 border: '1px solid var(--border)',
                 borderRadius: 6,
