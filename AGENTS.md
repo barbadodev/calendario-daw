@@ -54,6 +54,8 @@ Cuando el usuario te pida "apunta X en el calendario" o "di al profe Y":
 4. **Ejecuta** el comando `add-event.js` desde la terminal.
 5. **Informa** del resultado.
 
+Si el usuario menciona el nombre de un módulo en español largo ("Despliegue", "Diseño de Interfaces", "Inglés", "Proyecto"), tradúcelo al ID interno antes de ejecutar el script.
+
 ## Otros comandos útiles
 
 Listar eventos próximos:
