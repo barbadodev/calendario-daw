@@ -39,6 +39,69 @@ router.post('/suscribir', async (req, res) => {
   }
 });
 
+// POST /api/push/test
+// Envía una notificación de prueba a todas las suscripciones registradas.
+// Body opcional: { sala, titulo, cuerpo, url }
+router.post('/test', async (req, res) => {
+  try {
+    const { sala, titulo, cuerpo, url } = req.body || {};
+    if (sala && sala !== process.env.SALA_CODIGO) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+
+    const { data: subs } = await supabaseAdmin
+      .from('suscripciones_push').select('id, datos, usuario_id');
+
+    if (!subs || subs.length === 0) {
+      return res.json({
+        enviadas: 0,
+        avisos: 0,
+        msg: 'Nadie tiene suscripciones activas todavía. Abrid la PWA y pulsad "Activar notificaciones" primero.',
+      });
+    }
+
+    const payload = JSON.stringify({
+      titulo: titulo || '🧪 Notificación de prueba',
+      cuerpo: cuerpo || 'Si ves esto, las notificaciones push están funcionando correctamente 🎉',
+      url: url || null,
+    });
+
+    let enviadas = 0, avisos = 0, errores = [];
+
+    for (const s of subs) {
+      try {
+        await webpush.sendNotification(s.datos, payload);
+        enviadas++;
+      } catch (err) {
+        if (err.statusCode === 410) {
+          await supabaseAdmin.from('suscripciones_push').delete().eq('id', s.id);
+          avisos++;
+        } else {
+          errores.push({ id: s.usuario_id, error: err.message, status: err.statusCode });
+        }
+      }
+    }
+
+    res.json({ enviadas, caducadas: avisos, errores });
+  } catch (err) {
+    console.error('Error en POST /push/test:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/push/suscripciones-count?sala=xxx — para saber cuántos están suscritos
+router.get('/suscripciones-count', async (req, res) => {
+  try {
+    const { sala } = req.query;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const { count } = await supabaseAdmin
+      .from('suscripciones_push').select('*', { count: 'exact', head: true });
+    res.json({ total: count || 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 async function notificarUsuario(usuarioId, titulo, cuerpo, url) {
   const { data: subs } = await supabaseAdmin
     .from('suscripciones_push')

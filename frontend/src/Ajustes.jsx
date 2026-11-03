@@ -8,6 +8,7 @@ export default function Ajustes({ usuario, eventos }) {
   const [notifActiva, setNotifActiva] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [sincronizando, setSincronizando] = useState(false);
+  const [probandoNotif, setProbandoNotif] = useState(false);
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
 
   useEffect(() => {
@@ -60,6 +61,33 @@ export default function Ajustes({ usuario, eventos }) {
     setTimeout(() => window.location.reload(), 2000);
   }
 
+  async function probarNotificacion() {
+    setProbandoNotif(true);
+    try {
+      const info = await fetch(`${API_URL}/api/push/suscripciones-count?sala=${usuario.codigo_sala}`);
+      const { total } = await info.json();
+      if (total === 0) {
+        setMensaje('⚠️ Nadie está suscrito todavía. Activa antes las notificaciones desde arriba.');
+        setProbandoNotif(false);
+        return;
+      }
+      const res = await fetch(`${API_URL}/api/push/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sala: usuario.codigo_sala,
+          titulo: '🧪 Prueba DAW',
+          cuerpo: `Enviada a ${total} dispositivo(s). Si la ves, todo OK 🎉`,
+        }),
+      });
+      const data = await res.json();
+      setMensaje(`✅ Enviadas: ${data.enviadas} · Dispositivos caducados: ${data.caducadas}`);
+    } catch (err) {
+      setMensaje('❌ Error al enviar: ' + err.message);
+    }
+    setProbandoNotif(false);
+  }
+
   function urlBase64ToUint8Array(base64) {
     const padding = '='.repeat((4 - base64.length % 4) % 4);
     const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -95,7 +123,16 @@ export default function Ajustes({ usuario, eventos }) {
             : <button className="btn btn-filled" onClick={activarNotificaciones}>Activar</button>
           }
         </div>
+        <div className="ajustes-item">
+          <span className="ajustes-item-label">Enviar notificación de prueba</span>
+          <button className="btn" onClick={probarNotificacion} disabled={probandoNotif}>
+            {probandoNotif ? 'Enviando...' : '🧪 Probar'}
+          </button>
+        </div>
         {mensaje && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4 }}>{mensaje}</p>}
+        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 8, fontStyle: 'italic' }}>
+          💡 En iPhone solo funcionan si instalaste la web como app (Safari → Compartir → Añadir a pantalla de inicio) y la abres desde ahí, no desde Safari.
+        </p>
       </div>
 
       <div className="ajustes-card">
