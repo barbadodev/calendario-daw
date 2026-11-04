@@ -8,7 +8,6 @@ import Ajustes from './Ajustes.jsx';
 import Estadisticas from './Estadisticas.jsx';
 import NotasModulo from './NotasModulo.jsx';
 import PlanEstudio from './PlanEstudio.jsx';
-import ContadorProximo from './ContadorProximo.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
 import AlertaCierres from './AlertaCierres.jsx';
 import { supabase } from './supabase.js';
@@ -208,7 +207,7 @@ export default function App() {
   return (
     <>
       <header className="app-header">
-        <h1><CalendarDays size={18} /> CalDAW <span className="user-badge">{usuario.nombre}</span></h1>
+        <h1><CalendarDays size={18} /> DAW <span className="user-badge">{usuario.nombre}</span></h1>
         <div className="header-actions">
           <button className="btn-icon" onClick={alternarTema}
             title={tema === 'oscuro' ? 'Poner modo claro' : 'Poner modo oscuro'}>
@@ -223,7 +222,6 @@ export default function App() {
         </div>
       </header>
 
-      <ContadorProximo eventos={eventos} />
       <AlertaCierres sala={usuario.codigo_sala} onMarcarEntregado={marcarEntregado} />
       <BannerMoodle sala={usuario.codigo_sala} />
 
