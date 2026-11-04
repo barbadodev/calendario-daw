@@ -143,6 +143,29 @@
   box-shadow: var(--shadow-sm);
 }
 
+/* En móvil el segmented control no puede ajustarse al contenido:
+   ocupa el ancho útil, hace scroll horizontal y mantiene 44px táctiles */
+@media (max-width: 640px) {
+  [data-estilo="macos"] .view-tabs {
+    width: auto;
+    margin: 8px 12px 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+  [data-estilo="macos"] .view-tabs::-webkit-scrollbar { display: none; }
+  [data-estilo="macos"] .view-tab {
+    flex: 0 0 auto;
+    padding: 0.6rem 0.9rem;
+    min-height: 44px;
+    font-size: 0.8125rem;
+  }
+}
+@media (max-width: 380px) {
+  [data-estilo="macos"] .view-tabs { margin: 6px 8px 0; gap: 1px; }
+  [data-estilo="macos"] .view-tab { padding: 0.6rem 0.7rem; font-size: 0.78rem; }
+}
+
 /* Etiquetas pastel (el tinte ya lo calcula modulos.js) */
 [data-estilo="macos"] .etiqueta {
   border-radius: 5px;
