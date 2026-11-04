@@ -9,27 +9,32 @@ export default function SemanaExamenes({ usuario }) {
 
   useEffect(() => {
     (async () => {
-      const res = await fetch(`${API}/api/config/semana-examen?sala=${usuario.codigo_sala}`);
-      const { config } = await res.json();
-      if (config?.desde) setConfig({ desde: config.desde.slice(0, 10), hasta: config.hasta?.slice(0, 10) || '' });
+      try {
+        const res = await fetch(`${API}/api/config/semana-examen?sala=${usuario.codigo_sala}`);
+        if (!res.ok) return;
+        const { config } = await res.json();
+        if (config?.desde) setConfig({ desde: config.desde.slice(0, 10), hasta: config.hasta?.slice(0, 10) || '' });
+      } catch { /* sin conexión: se queda vacío */ }
     })();
   }, []);
 
   async function guardar(e) {
     e.preventDefault();
     setGuardando(true);
-    const res = await fetch(`${API}/api/config/semana-examen`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, desde: config.desde || null, hasta: config.hasta || null }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API}/api/config/semana-examen`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, desde: config.desde || null, hasta: config.hasta || null }),
+      });
+      if (!res.ok) throw new Error('guardar');
       setMsg({ texto: 'Semana de exámenes guardada. Los eventos de ese rango se pintarán en rojo.', tipo: 'exito' });
-    } else {
+    } catch {
       setMsg({ texto: 'No se pudo guardar la semana de exámenes', tipo: 'error' });
+    } finally {
+      setGuardando(false);
+      setTimeout(() => setMsg(null), 4000);
     }
-    setGuardando(false);
-    setTimeout(() => setMsg(null), 4000);
   }
 
   const campoFecha = {

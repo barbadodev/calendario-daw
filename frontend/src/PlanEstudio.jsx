@@ -1,21 +1,31 @@
 import { useEffect, useState } from 'react';
+import { getModulo } from './modulos.js';
 
 const API = import.meta.env.VITE_API_URL;
-const NOMBRES = { ipe: 'IPE', dwec: 'DWEC', dwes: 'DWES', daw: 'DAW', diw: 'DIW', en: 'Inglés', opt: 'Optativa', proy: 'Proyecto', otro: 'Otro' };
-const COLOR = { ipe: '#6a5a9e', dwec: '#3f6fa8', dwes: '#3d7a5c', daw: '#a85f33', diw: '#a1517a', en: '#3d7f8c', opt: '#8a6a26', proy: '#a04a44', otro: '#74716a' };
 
 /** Carga de trabajo por semana ISO, para decidir dónde hace falta estudiar. */
 export default function PlanEstudio({ usuario }) {
   const [semanas, setSemanas] = useState(null);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
+    let vivo = true;
     fetch(`${API}/api/plan-estudio?sala=${usuario.codigo_sala}`)
-      .then(r => r.json())
-      .then(d => setSemanas(d.semanas || []))
-      .catch(() => setSemanas([]));
+      .then(r => {
+        if (!r.ok) throw new Error('plan');
+        return r.json();
+      })
+      .then(d => { if (vivo) setSemanas(d.semanas || []); })
+      .catch(() => {
+        if (!vivo) return;
+        setError(true);
+        setSemanas([]);
+      });
+    return () => { vivo = false; };
   }, []);
 
   if (!semanas) return <div className="eventos-lista"><p style={{ color: 'var(--text-muted)' }}>Calculando carga de trabajo…</p></div>;
+  if (error) return <div className="eventos-lista"><p style={{ color: 'var(--text-muted)' }}>No se pudo cargar el plan de estudio.</p></div>;
   if (semanas.length === 0) return <div className="eventos-lista"><p className="hoja-vacio">No tienes nada pendiente.</p></div>;
 
   const maxCarga = Math.max(...semanas.map(s => s.cargaHorasEstimadas), 1);
@@ -47,18 +57,21 @@ export default function PlanEstudio({ usuario }) {
             <div className="barra-fondo" style={{ marginBottom: '0.65rem' }}>
               <div className="barra-relleno" style={{ width: `${pct}%`, background: color }} />
             </div>
-            {(s.eventos || []).map(e => (
-              <div key={e.id} className="fila-plan" style={{ opacity: e.completado ? 0.5 : 1 }}>
-                <span style={{ width: 7, height: 7, borderRadius: '50%', background: COLOR[e.modulo] || COLOR.otro, flexShrink: 0 }} />
-                <span className="plan-fecha">
-                  {new Date(e.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                </span>
-                <span className="plan-modulo" style={{ '--mod': COLOR[e.modulo] || COLOR.otro }}>
-                  {NOMBRES[e.modulo] || e.modulo}
-                </span>
-                <span style={{ textDecoration: e.completado ? 'line-through' : 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{e.titulo}</span>
-              </div>
-            ))}
+            {(s.eventos || []).map(e => {
+              const mod = getModulo(e.modulo);
+              return (
+                <div key={e.id} className="fila-plan" style={{ opacity: e.completado ? 0.5 : 1 }}>
+                  <span style={{ width: 7, height: 7, borderRadius: '50%', background: mod.color, flexShrink: 0 }} />
+                  <span className="plan-fecha">
+                    {new Date(e.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
+                  </span>
+                  <span className="plan-modulo" style={{ '--mod': mod.color }}>
+                    {mod.nombre}
+                  </span>
+                  <span style={{ textDecoration: e.completado ? 'line-through' : 'none', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>{e.titulo}</span>
+                </div>
+              );
+            })}
           </div>
         );
       })}

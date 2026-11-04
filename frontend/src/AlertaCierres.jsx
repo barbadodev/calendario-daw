@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MODULOS, tinte } from './modulos.js';
+import { getModulo, tinte } from './modulos.js';
 import { IconoCheck } from './Icons.jsx';
 
 const API = import.meta.env.VITE_API_URL;
@@ -39,6 +39,12 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
     sessionStorage.setItem('caldaw_cierres_min', v ? '1' : '0');
   }
 
+  // Quitarla de la lista al momento: si no, sigue ahí hasta el próximo sondeo.
+  function marcarEntregada(id) {
+    setCierres(prev => prev.filter(c => c.id !== id));
+    onMarcarEntregado(id);
+  }
+
   return (
     <div className="aviso-banda" style={{ '--tono': tono }}>
       <div className="aviso-cabecera">
@@ -54,7 +60,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
       {!minimizada && (
         <div className="aviso-lista">
           {cierres.map(c => {
-            const mod = MODULOS.find(m => m.id === c.modulo_id) || { nombre: c.modulo_id?.toUpperCase(), color: '#74716a' };
+            const mod = getModulo(c.modulo_id);
             return (
               <div key={c.id} className="aviso-fila">
                 <span className="etiqueta" style={{ background: tinte(mod.color, 0.12), color: mod.color }}>{mod.nombre}</span>
@@ -68,7 +74,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
                   </a>
                 )}
                 <button
-                  onClick={() => onMarcarEntregado(c.id)}
+                  onClick={() => marcarEntregada(c.id)}
                   title="Marcar como entregada"
                   aria-label="Marcar como entregada"
                   className="btn-mini">

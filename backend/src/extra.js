@@ -175,7 +175,7 @@ routerGlobal.get('/resumen-semana', async (req, res) => {
   try {
     const { sala, dias } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-    const n = Math.min(parseInt(dias || '7', 10), 31);
+    const n = Math.min(Math.max(parseInt(dias, 10) || 7, 1), 31);
     const desde = new Date(); desde.setHours(0, 0, 0, 0);
     const hasta = new Date(desde.getTime() + n * 86400000);
     const { data: eventos } = await supabaseAdmin

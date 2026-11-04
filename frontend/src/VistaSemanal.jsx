@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { startOfWeek, addDays, format, isToday, parseISO, addWeeks, subWeeks } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getModulo, tinte } from './modulos.js';
@@ -10,13 +10,22 @@ export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
   const dias = Array.from({ length: 7 }, (_, i) => addDays(inicio, i));
   const esMovil = useEsMovil();
 
+  const eventosPorDia = useMemo(() => {
+    const mapa = new Map();
+    for (const e of eventos) {
+      const clave = format(new Date(e.fecha_inicio), 'yyyy-MM-dd');
+      const lista = mapa.get(clave);
+      if (lista) lista.push(e);
+      else mapa.set(clave, [e]);
+    }
+    for (const lista of mapa.values()) {
+      lista.sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+    }
+    return mapa;
+  }, [eventos]);
+
   function eventosDe(dia) {
-    return eventos.filter(e => {
-      const f = new Date(e.fecha_inicio);
-      return f.getFullYear() === dia.getFullYear() &&
-             f.getMonth() === dia.getMonth() &&
-             f.getDate() === dia.getDate();
-    }).sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+    return eventosPorDia.get(format(dia, 'yyyy-MM-dd')) || [];
   }
 
   const nav = (

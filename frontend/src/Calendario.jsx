@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isSameDay, isToday, addMonths, subMonths, addDays, subDays } from 'date-fns';
+import { useMemo, useState } from 'react';
+import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMonth, isToday, addMonths, subMonths, addDays, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getModulo, tinte } from './modulos.js';
 import useEsMovil, { useBloquearScroll } from './useEsMovil.js';
@@ -35,10 +35,23 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
   const tituloMes = format(mesActual, 'MMMM yyyy', { locale: es });
   const tituloMesCap = tituloMes.charAt(0).toUpperCase() + tituloMes.slice(1);
 
+  // Agrupar una sola vez por día: antes se filtraba la lista entera 42 veces.
+  const eventosPorDia = useMemo(() => {
+    const mapa = new Map();
+    for (const e of eventos) {
+      const clave = format(new Date(e.fecha_inicio), 'yyyy-MM-dd');
+      const lista = mapa.get(clave);
+      if (lista) lista.push(e);
+      else mapa.set(clave, [e]);
+    }
+    for (const lista of mapa.values()) {
+      lista.sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+    }
+    return mapa;
+  }, [eventos]);
+
   function eventosDe(dia) {
-    return eventos
-      .filter(e => isSameDay(new Date(e.fecha_inicio), dia))
-      .sort((a, b) => new Date(a.fecha_inicio) - new Date(b.fecha_inicio));
+    return eventosPorDia.get(format(dia, 'yyyy-MM-dd')) || [];
   }
 
   function clicEnDia(dia) {

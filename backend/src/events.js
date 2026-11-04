@@ -221,10 +221,13 @@ router.post('/:id/notas', async (req, res) => {
     if (sala !== process.env.SALA_CODIGO) {
       return res.status(401).json({ error: 'No autorizado' });
     }
+    const texto = String(contenido ?? '').trim();
+    if (!texto) return res.status(400).json({ error: 'La nota está vacía' });
+    if (texto.length > 1000) return res.status(400).json({ error: 'La nota es demasiado larga' });
 
     const { data, error } = await supabaseAdmin
       .from('notas_evento')
-      .insert({ evento_id: req.params.id, contenido, autor_id: autor_id || null })
+      .insert({ evento_id: req.params.id, contenido: texto, autor_id: autor_id || null })
       .select()
       .single();
 
@@ -234,7 +237,7 @@ router.post('/:id/notas', async (req, res) => {
     if (autor_id) {
       const { data: ev } = await supabaseAdmin
         .from('eventos').select('modulo_id').eq('id', req.params.id).single();
-      const resumen = contenido.length > 70 ? contenido.slice(0, 70).trim() + '…' : contenido;
+      const resumen = texto.length > 70 ? texto.slice(0, 70).trim() + '…' : texto;
       const r = await avisar({
         tipo: 'nota',
         usuarioId: autor_id,

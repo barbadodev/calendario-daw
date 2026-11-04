@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Login from './Login.jsx';
 import Calendario from './Calendario.jsx';
 import VistaSemanal from './VistaSemanal.jsx';
@@ -30,6 +30,7 @@ export default function App() {
   const [eventoDestacado, setEventoDestacado] = useState(null);
   const [aviso, setAviso] = useState(null);
   const [tema, setTemaEstado] = useState(() => temaActual());
+  const avisoTimer = useRef(null);
 
   function alternarTema() {
     const siguiente = tema === 'oscuro' ? 'claro' : 'oscuro';
@@ -38,14 +39,21 @@ export default function App() {
   }
 
   function mostrarAviso(texto, tipo = 'ok') {
+    // Si llega otro aviso, el temporizador anterior no debe cerrarlo.
+    clearTimeout(avisoTimer.current);
     setAviso({ texto, tipo });
-    setTimeout(() => setAviso(null), 4500);
+    avisoTimer.current = setTimeout(() => setAviso(null), 4500);
   }
+
+  useEffect(() => () => clearTimeout(avisoTimer.current), []);
 
   // Recuperar sesión y abrir deep-link ?evento=xxx (desde notificación)
   useEffect(() => {
     const guardado = localStorage.getItem('usuario');
-    if (guardado) setUsuario(JSON.parse(guardado));
+    if (guardado) {
+      try { setUsuario(JSON.parse(guardado)); }
+      catch { localStorage.removeItem('usuario'); }
+    }
     const params = new URLSearchParams(window.location.search);
     if (params.get('evento')) setEventoDestacado(params.get('evento'));
   }, []);
@@ -104,59 +112,79 @@ export default function App() {
   }
 
   async function crearEvento(eventoData) {
-    const res = await fetch(`${API_URL}/api/eventos`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, evento: { ...eventoData, creado_por: usuario.id } }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API_URL}/api/eventos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, evento: { ...eventoData, creado_por: usuario.id } }),
+      });
+      if (!res.ok) throw new Error('crear');
       const d = await res.json();
       setModalAbierto(false);
       cargarEventos();
       mostrarAviso('Evento guardado' + textoAvisos(d));
-    } else mostrarAviso('No se pudo guardar el evento', 'error');
+    } catch {
+      mostrarAviso('No se pudo guardar el evento', 'error');
+    }
   }
 
   async function actualizarEvento(id, eventoData) {
-    const res = await fetch(`${API_URL}/api/eventos/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, evento: eventoData, usuarioId: usuario.id }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, evento: eventoData, usuarioId: usuario.id }),
+      });
+      if (!res.ok) throw new Error('actualizar');
       const d = await res.json();
       setModalAbierto(false); setEventoSeleccionado(null); cargarEventos();
       mostrarAviso('Cambios guardados' + textoAvisos(d));
-    } else mostrarAviso('No se pudieron guardar los cambios', 'error');
+    } catch {
+      mostrarAviso('No se pudieron guardar los cambios', 'error');
+    }
   }
 
   async function eliminarEvento(id) {
     if (!confirm('¿Eliminar este evento?')) return;
-    const res = await fetch(`${API_URL}/api/eventos/${id}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id }),
+      });
+      if (!res.ok) throw new Error('eliminar');
       const d = await res.json();
       setModalAbierto(false); setEventoSeleccionado(null); cargarEventos();
       mostrarAviso('Evento eliminado' + textoAvisos(d));
+    } catch {
+      mostrarAviso('No se pudo eliminar el evento', 'error');
     }
   }
 
   async function toggleCompletar(id, valorActual) {
-    setEventos(prev => prev.map(e => e.id === id ? { ...e, completado: !valorActual } : e));
-    await fetch(`${API_URL}/api/eventos/${id}/completar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, valor: !valorActual }),
-    });
+    const nuevo = !valorActual;
+    setEventos(prev => prev.map(e => e.id === id ? { ...e, completado: nuevo } : e));
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${id}/completar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, valor: nuevo }),
+      });
+      if (!res.ok) throw new Error('completar');
+      return true;
+    } catch {
+      // Deshacer el cambio optimista: si no, la interfaz miente.
+      setEventos(prev => prev.map(e => e.id === id ? { ...e, completado: valorActual } : e));
+      mostrarAviso('No se pudo actualizar el evento', 'error');
+      return false;
+    }
   }
 
   async function marcarEntregado(id) {
     const ev = eventos.find(e => e.id === id);
     if (!ev || ev.completado) return;
-    await toggleCompletar(id, ev.completado);
+    const ok = await toggleCompletar(id, ev.completado);
+    if (!ok) return;
     mostrarAviso(`${ev.titulo.slice(0, 40)} · marcada como entregada`);
     // Avisa al grupo de que ya la has subido
     fetch(`${API_URL}/api/eventos/${id}/notas`, {
@@ -167,19 +195,22 @@ export default function App() {
         contenido: 'Entregada',
         autor_id: usuario.id,
       }),
-    });
+    }).catch(() => {});
   }
 
   async function duplicarEvento(id) {
-    const res = await fetch(`${API_URL}/api/eventos/${id}/duplicar`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala }),
-    });
-    if (res.ok) {
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${id}/duplicar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala }),
+      });
+      if (!res.ok) throw new Error('duplicar');
       const { evento } = await res.json();
       setEventoSeleccionado(evento);
       cargarEventos();
+    } catch {
+      mostrarAviso('No se pudo duplicar el evento', 'error');
     }
   }
 
@@ -249,7 +280,7 @@ export default function App() {
         {vista === 'semana' && <VistaSemanal eventos={eventosVista} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
         {vista === 'lista' && <ListaEventos eventos={eventosVista} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
         {vista === 'plan' && <PlanEstudio usuario={usuario} />}
-        {vista === 'stats' && <Estadisticas usuario={usuario} eventos={eventos} />}
+        {vista === 'stats' && <Estadisticas usuario={usuario} />}
         {vista === 'notas' && <NotasModulo usuario={usuario} />}
         {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
 

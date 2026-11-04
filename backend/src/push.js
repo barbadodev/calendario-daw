@@ -268,7 +268,9 @@ export async function enviarNotificacionesRecordatorio() {
       let notificar = false;
       let etiqueta = '';
 
-      if (minutos > 0 && minutos <= 60) {
+      // Ventana de 5 min: el bucle corre cada 5 min, así que un rango mayor
+      // repetiría el mismo aviso una y otra vez durante la hora previa.
+      if (minutos > 55 && minutos <= 60) {
         notificar = true;
         etiqueta = '1h antes';
       } else if (minutos > 24 * 60 - 5 && minutos <= 24 * 60) {

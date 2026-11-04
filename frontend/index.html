@@ -26,10 +26,12 @@
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <!-- Tipografías de los estilos alternativos. Sin red se usa la del sistema. -->
+    <!-- Tipografías de los estilos alternativos. Se cargan sin bloquear el
+         primer pintado; sin red se usa la del sistema. -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" />
+    <link rel="stylesheet" media="print" onload="this.media='all'"
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" />
     <title>Calendario DAW 2º</title>
   </head>
   <body>

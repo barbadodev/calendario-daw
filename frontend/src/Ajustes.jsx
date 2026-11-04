@@ -41,9 +41,12 @@ export default function Ajustes({ usuario, eventos }) {
   }, []);
 
   async function cargarUsuarios() {
-    const res = await fetch(`${API_URL}/api/auth/usuarios?sala=${usuario.codigo_sala}`);
-    const data = await res.json();
-    if (data.usuarios) setUsuarios(data.usuarios);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/usuarios?sala=${usuario.codigo_sala}`);
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.usuarios) setUsuarios(data.usuarios);
+    } catch { /* sin conexión: se queda la lista vacía */ }
   }
 
   async function activarNotificaciones() {
@@ -111,24 +114,39 @@ export default function Ajustes({ usuario, eventos }) {
   async function sincronizarAhora() {
     setSincronizando(true);
     avisar('Forzando sincronización con Moodle…');
-    const res = await fetch(`${API_URL}/api/sync/now`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala }),
-    });
-    if (res.ok) avisar('Sincronización completada. Recarga si no ves los cambios.', 'exito');
-    else avisar('Error sincronizando con Moodle', 'error');
-    setSincronizando(false);
-    setTimeout(() => window.location.reload(), 2000);
+    try {
+      const res = await fetch(`${API_URL}/api/sync/now`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala }),
+      });
+      if (!res.ok) throw new Error('sync');
+      avisar('Sincronización completada. Recarga si no ves los cambios.', 'exito');
+      setTimeout(() => window.location.reload(), 2000);
+    } catch {
+      avisar('Error sincronizando con Moodle', 'error');
+    } finally {
+      setSincronizando(false);
+    }
   }
 
   async function generarResumen(dias) {
     try {
       const res = await fetch(`${API_URL}/api/resumen-semana?sala=${usuario.codigo_sala}&dias=${dias}`);
+      if (!res.ok) throw new Error('resumen');
       const data = await res.json();
       setResumen(data.texto || 'Sin eventos');
     } catch {
       avisar('No se pudo generar el resumen', 'error');
+    }
+  }
+
+  async function copiar(texto, mensaje) {
+    try {
+      await navigator.clipboard.writeText(texto);
+      avisar(mensaje, 'exito');
+    } catch {
+      avisar('No se pudo copiar. Selecciona el texto y cópialo a mano.', 'error');
     }
   }
 
@@ -240,7 +258,7 @@ export default function Ajustes({ usuario, eventos }) {
         ) : (
           <div className="caja-url" style={{ marginTop: '0.6rem' }}>
             {icsUrl}
-            <button className="btn" onClick={() => navigator.clipboard.writeText(icsUrl).then(() => alert('Copiado'))}
+            <button className="btn" onClick={() => copiar(icsUrl, 'URL copiada')}
               style={{ display: 'block', marginTop: '0.5rem', padding: '0.25rem 0.55rem', fontSize: '0.72rem' }}>
               Copiar
             </button>
@@ -266,7 +284,7 @@ export default function Ajustes({ usuario, eventos }) {
               className="caja-resumen"
             />
             <div className="fila-botones" style={{ marginTop: '0.4rem' }}>
-              <button className="btn btn-filled" onClick={() => navigator.clipboard.writeText(resumen).then(() => avisar('Resumen copiado', 'exito'))}>Copiar</button>
+              <button className="btn btn-filled" onClick={() => copiar(resumen, 'Resumen copiado')}>Copiar</button>
               <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(resumen)}`} target="_blank" rel="noreferrer">
                 Abrir en WhatsApp
               </a>

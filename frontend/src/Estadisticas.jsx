@@ -1,28 +1,35 @@
 import { useState, useEffect } from 'react';
-import { API } from './api.js';
-import { NOMBRE_TIPO } from './modulos.js';
+import { NOMBRE_TIPO, getModulo } from './modulos.js';
 
-const COLORES = { ipe: '#6a5a9e', dwec: '#3f6fa8', dwes: '#3d7a5c', daw: '#a85f33', diw: '#a1517a', en: '#3d7f8c', opt: '#8a6a26', proy: '#a04a44' };
+const API = import.meta.env.VITE_API_URL;
 
-export default function Estadisticas({ usuario, eventos }) {
+export default function Estadisticas({ usuario }) {
   const [stats, setStats] = useState(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
 
   useEffect(() => {
+    let vivo = true;
     (async () => {
       try {
         const res = await fetch(`${API}/api/stats?sala=${usuario.codigo_sala}`);
+        if (!res.ok) throw new Error('No se pudo cargar');
         const data = await res.json();
-        setStats(data);
-      } finally { setCargando(false); }
+        if (vivo) setStats(data);
+      } catch {
+        if (vivo) setError(true);
+      } finally {
+        if (vivo) setCargando(false);
+      }
     })();
+    return () => { vivo = false; };
   }, [usuario]);
 
   if (cargando) return <div className="eventos-lista"><p style={{ color: 'var(--text-muted)' }}>Cargando estadísticas…</p></div>;
-  if (!stats) return <div className="eventos-lista"><p style={{ color: 'var(--text-muted)' }}>No disponible</p></div>;
+  if (error || !stats) return <div className="eventos-lista"><p style={{ color: 'var(--text-muted)' }}>No se pudieron cargar las estadísticas.</p></div>;
 
-  const porModulo = Object.entries(stats.porModulo).sort((a, b) => b[1] - a[1]);
-  const porTipo = Object.entries(stats.porTipo).sort((a, b) => b[1] - a[1]);
+  const porModulo = Object.entries(stats.porModulo || {}).sort((a, b) => b[1] - a[1]);
+  const porTipo = Object.entries(stats.porTipo || {}).sort((a, b) => b[1] - a[1]);
   const maxMod = porModulo[0]?.[1] || 1;
   const maxTipo = porTipo[0]?.[1] || 1;
 
@@ -31,19 +38,20 @@ export default function Estadisticas({ usuario, eventos }) {
       <div className="ajustes-card">
         <h3>Resumen general</h3>
         <div className="stat-grid">
-          <StatBox label="Total" value={stats.total} color="#2f4a43" />
-          <StatBox label="Próximos 7 d" value={stats.proximos7} color="#a85f33" />
-          <StatBox label="Pendientes mes" value={stats.pendientesMes} color="#a4443c" />
-          <StatBox label="Completados" value={stats.entregados} color="#3d7a5c" />
-          <StatBox label="% hechas" value={`${stats.tasaCompletado}%`} color="#3f6fa8" />
+          <StatBox label="Total" value={stats.total || 0} color="#2f4a43" />
+          <StatBox label="Próximos 7 d" value={stats.proximos7 || 0} color="#a85f33" />
+          <StatBox label="Pendientes mes" value={stats.pendientesMes || 0} color="#a4443c" />
+          <StatBox label="Completados" value={stats.entregados || 0} color="#3d7a5c" />
+          <StatBox label="% hechas" value={`${stats.tasaCompletado || 0}%`} color="#3f6fa8" />
         </div>
       </div>
 
       <div className="ajustes-card">
         <h3>Por módulo</h3>
-        {porModulo.length === 0 ? <p>Sin datos.</p> : porModulo.map(([id, count]) => (
-          <BarRow key={id} label={id.toUpperCase()} value={count} max={maxMod} color={getModColor(id)} />
-        ))}
+        {porModulo.length === 0 ? <p>Sin datos.</p> : porModulo.map(([id, count]) => {
+          const mod = getModulo(id);
+          return <BarRow key={id} label={mod.nombre} value={count} max={maxMod} color={mod.color} />;
+        })}
       </div>
 
       <div className="ajustes-card">
@@ -77,8 +85,4 @@ function BarRow({ label, value, max, color }) {
       </div>
     </div>
   );
-}
-
-function getModColor(id) {
-  return COLORES[id] || '#74716a';
 }

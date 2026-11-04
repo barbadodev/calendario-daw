@@ -74,7 +74,13 @@ self.addEventListener('fetch', event => {
 
 // Mostrar notificación push
 self.addEventListener('push', event => {
-  const data = event.data ? event.data.json() : {};
+  let data = {};
+  try {
+    if (event.data) data = event.data.json();
+  } catch {
+    // Un push sin JSON válido no debe impedir que se muestre la notificación.
+    data = {};
+  }
   const titulo = data.titulo || 'Calendario DAW';
   const opciones = {
     body: data.cuerpo || 'Nuevo evento',

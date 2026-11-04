@@ -13,8 +13,11 @@ export default function NotasModulo({ usuario }) {
     setCargando(true);
     try {
       const res = await fetch(`${API}/api/notas-modulo/${sel}?sala=${usuario.codigo_sala}`);
+      if (!res.ok) throw new Error('notas');
       const data = await res.json();
       setNotas(data.notas || []);
+    } catch {
+      setNotas([]);
     } finally {
       setCargando(false);
     }

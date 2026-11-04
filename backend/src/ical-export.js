@@ -84,7 +84,9 @@ router.get('/ics', async (req, res) => {
       // Color específico de Apple Calendar por evento
       lineas.push(`X-APPLE-CALENDAR-COLOR:${appleColor(cat.apple)}`);
 
-      lineas.push(`STATUS:${ev.completado ? 'CONFIRMED' : 'TENTATIVE'}`);
+      // Un evento pendiente no es "provisional": en Google/Apple TENTATIVE
+      // lo pinta rayado y con hora dudosa.
+      lineas.push('STATUS:CONFIRMED');
 
       // Recordatorio 1 día antes (VEVALARM)
       if (!ev.completado && new Date(ev.fecha_inicio) > new Date()) {
@@ -101,7 +103,7 @@ router.get('/ics', async (req, res) => {
     lineas.push('END:VCALENDAR');
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Content-Disposition', 'inline; filename="calendario-daw.ics"');
-    res.send(lineas.join('\r\n'));
+    res.send(lineas.map(plegar).join('\r\n'));
   } catch (err) {
     console.error('Error ICS export:', err);
     res.status(500).send('Error');
@@ -123,4 +125,24 @@ function escapeICS(str) {
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,')
     .replace(/\r/g, '');
+}
+
+/**
+ * RFC 5545: ninguna línea debe pasar de 75 octetos. Las continuaciones
+ * empiezan por un espacio (que también cuenta). Sin esto, una descripción
+ * larga rompe el calendario en algunos clientes.
+ */
+function plegar(linea) {
+  const trozos = [];
+  let actual = '';
+  for (const ch of String(linea)) {
+    const ancho = Buffer.byteLength(actual, 'utf8') + Buffer.byteLength(ch, 'utf8');
+    if (ancho > 75) {
+      trozos.push(actual);
+      actual = ' ';
+    }
+    actual += ch;
+  }
+  trozos.push(actual);
+  return trozos.join('\r\n');
 }

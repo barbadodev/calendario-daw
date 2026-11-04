@@ -38,9 +38,14 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   }, [evento, fechaInicial]);
 
   async function cargarNotas(id) {
-    const res = await fetch(`${API_URL}/api/eventos/${id}/notas?sala=${usuario.codigo_sala}`);
-    const { notas } = await res.json();
-    setNotas(notas || []);
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${id}/notas?sala=${usuario.codigo_sala}`);
+      if (!res.ok) throw new Error('notas');
+      const { notas } = await res.json();
+      setNotas(notas || []);
+    } catch {
+      setNotas([]);
+    }
   }
 
   async function guardarNota(e) {
@@ -84,6 +89,15 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   const esOrigenMoodle = evento?.origen === 'moodle';
   useBloquearScroll(true);
 
+  // Escape cierra el modal, como en cualquier diálogo.
+  useEffect(() => {
+    function alPulsar(e) {
+      if (e.key === 'Escape') onCerrar();
+    }
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, [onCerrar]);
+
   return (
     <div className="modal-overlay" onClick={onCerrar}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
@@ -100,7 +114,7 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
           <div className="modal-body">
             <label htmlFor="ev-titulo">Título</label>
             <input id="ev-titulo" type="text" value={titulo} onChange={e => setTitulo(e.target.value)}
-              placeholder="Ej: Examen final DWES" required disabled={esOrigenMoodle} />
+              placeholder="Ej: Examen final DWES" required disabled={esOrigenMoodle} autoFocus={!esEdicion} />
 
             <label htmlFor="ev-modulo">Módulo</label>
             <select id="ev-modulo" value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={esOrigenMoodle}>
