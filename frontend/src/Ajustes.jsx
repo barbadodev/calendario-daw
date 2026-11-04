@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import SemanaExamenes from './SemanaExamenes.jsx';
 import { IconoEnlace, IconoMonitor, IconoSol, IconoLuna } from './Icons.jsx';
 import { setModo, modoActual } from './tema.js';
+import { ESTILOS, estiloActual, setEstilo } from './estilos.js';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -19,8 +20,13 @@ export default function Ajustes({ usuario, eventos }) {
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
   const [resumen, setResumen] = useState('');
   const [modo, setModoEstado] = useState(() => modoActual());
+  const [estilo, setEstiloEstado] = useState(() => estiloActual());
 
   function avisar(texto, tipo = 'neutro') { setMensaje({ texto, tipo }); }
+
+  function elegirEstilo(id) {
+    setEstiloEstado(setEstilo(id));
+  }
 
   function elegirTema(id) {
     setModo(id);
@@ -171,6 +177,25 @@ export default function Ajustes({ usuario, eventos }) {
           {modo === 'sistema'
             ? 'La app sigue el modo claro u oscuro que tenga tu móvil o navegador.'
             : `Fijado en modo ${modo}.`}
+        </p>
+      </div>
+
+      <div className="ajustes-card">
+        <h3>Estilo visual</h3>
+        <div className="selector-estilos" role="group" aria-label="Estilo visual de la aplicación">
+          {ESTILOS.map(({ id, nombre, descripcion }) => (
+            <button key={id}
+              className={`opcion-tema opcion-estilo ${estilo === id ? 'activo' : ''}`}
+              aria-pressed={estilo === id}
+              onClick={() => elegirEstilo(id)}>
+              <span className="estilo-nombre">{nombre}</span>
+              <span className="estilo-desc">{descripcion}</span>
+            </button>
+          ))}
+        </div>
+        <p className="ajustes-nota">
+          Cambia el aspecto al instante y se recuerda en este dispositivo. Atajo: Ctrl + Shift + S
+          para ir probándolos en cadena.
         </p>
       </div>
 

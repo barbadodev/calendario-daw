@@ -1,0 +1,543 @@
+/* ============================================================
+   ESTILOS VISUALES ALTERNATIVOS
+   Se activan con <html data-estilo="...">.
+   El estilo "limpio" no tiene reglas: es el index.css base.
+   ============================================================ */
+
+/* ------------------------------------------------------------
+   1) VISION GLASS — vidrio fuerte + aurora de fondo
+   ------------------------------------------------------------ */
+[data-estilo="glass"][data-tema] {
+  --bg: #0b1020;
+  --bg-surface: rgba(22, 30, 52, .62);
+  --bg-card: rgba(38, 50, 80, .58);
+  --bg-refuerzo: rgba(70, 88, 130, .45);
+  --text: #f5f7ff;
+  --text-muted: rgba(226, 232, 255, .62);
+  --border: rgba(160, 180, 230, .28);
+  --border-suave: rgba(190, 205, 250, .16);
+  --vidro: rgba(18, 26, 48, .58);
+  --modal-fondo: rgba(6, 10, 22, .55);
+  --sombra: 0 18px 40px rgba(4, 8, 20, .5);
+}
+
+[data-estilo="glass"][data-tema="claro"] {
+  --bg: #eef1fb;
+  --bg-surface: rgba(255, 255, 255, .58);
+  --bg-card: rgba(255, 255, 255, .68);
+  --text: #101a33;
+  --text-muted: rgba(28, 40, 74, .62);
+  --border: rgba(120, 140, 190, .35);
+  --border-suave: rgba(120, 140, 190, .22);
+  --vidro: rgba(255, 255, 255, .55);
+  --modal-fondo: rgba(18, 26, 48, .32);
+  --sombra: 0 18px 40px rgba(20, 32, 70, .18);
+}
+
+/* Aurora fija detrás de todo */
+[data-estilo="glass"] body { background: var(--bg); }
+[data-estilo="glass"] body::before {
+  content: "";
+  position: fixed;
+  inset: -10% -10% auto -10%;
+  height: 130%;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(45% 38% at 18% 8%, rgba(124, 92, 255, .55), transparent 65%),
+    radial-gradient(40% 34% at 82% 12%, rgba(0, 200, 255, .45), transparent 62%),
+    radial-gradient(46% 40% at 70% 74%, rgba(255, 122, 89, .38), transparent 66%),
+    radial-gradient(42% 36% at 12% 68%, rgba(52, 211, 153, .34), transparent 64%);
+  filter: blur(28px) saturate(1.25);
+}
+[data-estilo="glass"][data-tema="claro"] body::before { filter: blur(34px) saturate(1.1); opacity: .8; }
+[data-estilo="glass"] #root { position: relative; z-index: 1; }
+
+[data-estilo="glass"] {
+  --fuente-titulo: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+}
+[data-estilo="glass"] .app-header h1,
+[data-estilo="glass"] .mes-nav h2,
+[data-estilo="glass"] .card-titulo,
+[data-estilo="glass"] .modal-titulo,
+[data-estilo="glass"] .login-card h1 { font-family: var(--fuente-titulo); letter-spacing: -0.015em; }
+
+[data-estilo="glass"] .app-header,
+[data-estilo="glass"] .filtros-bar,
+[data-estilo="glass"] .view-tabs,
+[data-estilo="glass"] .mes-nav {
+  backdrop-filter: blur(22px) saturate(1.6);
+  -webkit-backdrop-filter: blur(22px) saturate(1.6);
+  border-bottom-color: var(--border-suave);
+}
+
+[data-estilo="glass"] .ajustes-card,
+[data-estilo="glass"] .evento-card,
+[data-estilo="glass"] .login-card,
+[data-estilo="glass"] .modal-card,
+[data-estilo="glass"] .toast {
+  backdrop-filter: blur(18px) saturate(1.5);
+  -webkit-backdrop-filter: blur(18px) saturate(1.5);
+  border-radius: 20px;
+  border: 1px solid var(--border-suave);
+  box-shadow: var(--sombra), inset 0 1px 0 rgba(255, 255, 255, .14);
+}
+[data-estilo="glass"] .modal-card { border-radius: 24px; }
+[data-estilo="glass"][data-tema="claro"] .ajustes-card,
+[data-estilo="glass"][data-tema="claro"] .evento-card,
+[data-estilo="glass"][data-tema="claro"] .login-card,
+[data-estilo="glass"][data-tema="claro"] .modal-card,
+[data-estilo="glass"][data-tema="claro"] .toast {
+  box-shadow: var(--sombra), inset 0 1px 0 rgba(255, 255, 255, .8);
+}
+
+[data-estilo="glass"] .dia-celda { border-color: var(--border-suave); }
+[data-estilo="glass"] .dia-cabecera { background: transparent; border-bottom-color: var(--border-suave); }
+
+[data-estilo="glass"] .filtro-chip,
+[data-estilo="glass"] .user-badge,
+[data-estilo="glass"] .evento-card-badge,
+[data-estilo="glass"] .evento-card-origen-moodle,
+[data-estilo="glass"] .chip-revisar { border-radius: 999px; }
+
+[data-estilo="glass"] .btn,
+[data-estilo="glass"] .btn-filled,
+[data-estilo="glass"] .opcion-tema { border-radius: 12px; }
+
+[data-estilo="glass"] .fab {
+  border-radius: 999px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  background: color-mix(in srgb, var(--primary) 78%, transparent);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--primary) 55%, transparent);
+}
+
+[data-estilo="glass"] .pulso { box-shadow: 0 0 12px currentColor; }
+
+/* ------------------------------------------------------------
+   2) NEOBRUTALISMO — bordes de tinta, sombras duras, planos
+   ------------------------------------------------------------ */
+[data-estilo="neobrutalo"][data-tema] {
+  --bg: #f7edd6;
+  --bg-surface: #fffaf0;
+  --bg-card: #ffefce;
+  --bg-refuerzo: #f0dfb8;
+  --text: #17130f;
+  --text-muted: #5e5347;
+  --primary: #4338ca;
+  --primary-hover: #3730a3;
+  --primary-suave: #ddd6fe;
+  --border: #17130f;
+  --border-suave: rgba(23, 19, 15, .38);
+  --danger: #c2410c;
+  --success: #15803d;
+  --success-suave: #bbf7d0;
+  --aviso: #a16207;
+  --vidro: #fffaf0;
+  --modal-fondo: rgba(23, 19, 15, .45);
+  --sombra: 5px 5px 0 var(--border);
+  --sombra-suave: 3px 3px 0 var(--border);
+}
+
+[data-estilo="neobrutalo"][data-tema="oscuro"] {
+  --bg: #100f14;
+  --bg-surface: #1b1a22;
+  --bg-card: #26242f;
+  --bg-refuerzo: #322f3c;
+  --text: #f7f4ea;
+  --text-muted: #b4ab9d;
+  --border: #f7f4ea;
+  --border-suave: rgba(247, 244, 234, .5);
+  --primary: #a5b4fc;
+  --primary-hover: #c7d2fe;
+  --primary-suave: #312e81;
+  --success: #4ade80;
+  --success-suave: #14532d;
+  --danger: #fdba74;
+  --aviso: #fde047;
+  --vidro: #1b1a22;
+  --modal-fondo: rgba(0, 0, 0, .62);
+}
+
+[data-estilo="neobrutalo"] {
+  --fuente-titulo: "Space Grotesk", "Segoe UI", system-ui, sans-serif;
+}
+[data-estilo="neobrutalo"] body { background: var(--bg); font-family: var(--fuente-titulo); }
+[data-estilo="neobrutalo"] .app-header h1,
+[data-estilo="neobrutalo"] .mes-nav h2,
+[data-estilo="neobrutalo"] .card-titulo,
+[data-estilo="neobrutalo"] .modal-titulo,
+[data-estilo="neobrutalo"] .login-card h1,
+[data-estilo="neobrutalo"] .evento-card-titulo {
+  font-family: var(--fuente-titulo);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+[data-estilo="neobrutalo"] .app-header h1,
+[data-estilo="neobrutalo"] .login-card h1 { text-transform: uppercase; letter-spacing: 0.01em; }
+
+/* Todos los bordes a tinta y radios casi rectos */
+[data-estilo="neobrutalo"] .ajustes-card,
+[data-estilo="neobrutalo"] .evento-card,
+[data-estilo="neobrutalo"] .login-card,
+[data-estilo="neobrutalo"] .modal-card,
+[data-estilo="neobrutalo"] .toast,
+[data-estilo="neobrutalo"] .nota-item,
+[data-estilo="neobrutalo"] .bloque-url,
+[data-estilo="neobrutalo"] .resumen-texto,
+[data-estilo="neobrutalo"] .descripcion-moodle {
+  border: 3px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--sombra);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+[data-estilo="neobrutalo"] .btn,
+[data-estilo="neobrutalo"] .btn-filled,
+[data-estilo="neobrutalo"] .btn-danger,
+[data-estilo="neobrutalo"] .btn-icon,
+[data-estilo="neobrutalo"] .opcion-tema,
+[data-estilo="neobrutalo"] .mes-nav button {
+  border: 3px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--sombra-suave);
+  font-weight: 700;
+}
+[data-estilo="neobrutalo"] .btn,
+[data-estilo="neobrutalo"] .btn-icon,
+[data-estilo="neobrutalo"] .opcion-tema,
+[data-estilo="neobrutalo"] .mes-nav button { background: var(--bg-surface); color: var(--text); }
+[data-estilo="neobrutalo"] .btn:hover,
+[data-estilo="neobrutalo"] .btn-icon:hover,
+[data-estilo="neobrutalo"] .opcion-tema:hover,
+[data-estilo="neobrutalo"] .mes-nav button:hover {
+  transform: translate(-1px, -1px);
+  box-shadow: 5px 5px 0 var(--border);
+}
+[data-estilo="neobrutalo"] .btn:active,
+[data-estilo="neobrutalo"] .btn-icon:active {
+  transform: translate(2px, 2px);
+  box-shadow: 1px 1px 0 var(--border);
+}
+[data-estilo="neobrutalo"] .btn-filled { background: var(--primary); color: #fff; }
+[data-estilo="neobrutalo"] .btn-moodle { border: 3px solid var(--border); border-radius: 6px; box-shadow: var(--sombra); color: #fff; }
+
+/* Chips y tabs como pegatinas */
+[data-estilo="neobrutalo"] .filtro-chip {
+  border: 2.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text);
+  font-weight: 700;
+  box-shadow: 2px 2px 0 var(--border);
+}
+[data-estilo="neobrutalo"] .filtro-chip.active { box-shadow: none; transform: translate(2px, 2px); color: #fff; }
+[data-estilo="neobrutalo"] .view-tabs { border-bottom: 3px solid var(--border); background: var(--bg-surface); }
+[data-estilo="neobrutalo"] .view-tab { font-weight: 700; border-bottom: 3px solid transparent; }
+[data-estilo="neobrutalo"] .view-tab.active { color: var(--text); border-bottom-color: var(--text); }
+
+[data-estilo="neobrutalo"] .app-header,
+[data-estilo="neobrutalo"] .filtros-bar,
+[data-estilo="neobrutalo"] .mes-nav {
+  background: var(--bg-surface);
+  border-bottom: 3px solid var(--border);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-estilo="neobrutalo"] .user-badge {
+  border: 2.5px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* Calendario rejilla marcada */
+[data-estilo="neobrutalo"] .calendario-grid { border: 3px solid var(--border); border-left-width: 3px; }
+[data-estilo="neobrutalo"] .dia-celda,
+[data-estilo="neobrutalo"] .dia-cabecera { border: 1.5px solid var(--border-suave); }
+[data-estilo="neobrutalo"] .dia-celda:hover { background: var(--bg-card); }
+[data-estilo="neobrutalo"] .dia-numero { font-weight: 700; color: var(--text); }
+[data-estilo="neobrutalo"] .dia-celda.hoy .dia-numero { border: 2.5px solid var(--border); border-radius: 999px; }
+[data-estilo="neobrutalo"] .dia-evento-mini { border: 1.5px solid var(--border); border-radius: 3px; font-weight: 700; }
+
+[data-estilo="neobrutalo"] .evento-card-color { width: 6px; border-radius: 3px; }
+[data-estilo="neobrutalo"] .evento-check { border-width: 3px !important; border-radius: 4px; }
+[data-estilo="neobrutalo"] .evento-card-badge { border: 2px solid var(--border); color: #fff; border-radius: 4px; font-weight: 700; }
+[data-estilo="neobrutalo"] .evento-card-origen-moodle { border: 2px solid var(--border); color: var(--text); background: var(--bg-card); border-radius: 4px; font-weight: 700; }
+
+[data-estilo="neobrutalo"] .banner { border-left: 6px solid var(--border); background: var(--bg-card); }
+[data-estilo="neobrutalo"] .banner-cierre.critico,
+[data-estilo="neobrutalo"] .banner-cierre.urgente,
+[data-estilo="neobrutalo"] .banner-cierre.proximo { background: var(--bg-card); border-left-color: var(--border); }
+[data-estilo="neobrutalo"] .banner-alerta { background: var(--bg-card); border-left-color: var(--danger); color: var(--danger); }
+
+[data-estilo="neobrutalo"] .fab {
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  background: var(--primary);
+  box-shadow: 5px 5px 0 var(--border);
+}
+[data-estilo="neobrutalo"] .fab:hover { transform: translate(-1px, -1px); }
+[data-estilo="neobrutalo"] .fab:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--border); }
+
+[data-estilo="neobrutalo"] .modal-overlay { backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px); }
+[data-estilo="neobrutalo"] .modal-body input,
+[data-estilo="neobrutalo"] .modal-body textarea,
+[data-estilo="neobrutalo"] .modal-body select,
+[data-estilo="neobrutalo"] .bloque-url input {
+  border: 2.5px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-surface);
+}
+[data-estilo="neobrutalo"] .stat-caja {
+  background: var(--bg-card);
+  border: 3px solid var(--border);
+  border-top-width: 8px;
+  border-radius: 6px;
+  box-shadow: var(--sombra-suave);
+}
+[data-estilo="neobrutalo"] .semana-bloque { border: 3px solid var(--border); border-left-width: 8px; border-radius: 6px; box-shadow: var(--sombra); }
+[data-estilo="neobrutalo"] .barra-carga { border: 2px solid var(--border); background: var(--bg-surface); }
+[data-estilo="neobrutalo"] .selector-tema .opcion-tema.activo { background: var(--text); color: var(--bg); border-color: var(--border); }
+
+/* ------------------------------------------------------------
+   3) HUD NEÓN — panel técnico, monoespaciado, glow
+   ------------------------------------------------------------ */
+[data-estilo="hud"][data-tema] {
+  --bg: #04060c;
+  --bg-surface: #080d18;
+  --bg-card: #0d1523;
+  --bg-refuerzo: #16233a;
+  --text: #d9f2ff;
+  --text-muted: #6b8bad;
+  --primary: #22d3ee;
+  --primary-hover: #67e8f9;
+  --primary-suave: rgba(34, 211, 238, .14);
+  --border: rgba(80, 220, 255, .28);
+  --border-suave: rgba(80, 220, 255, .16);
+  --danger: #ff5470;
+  --success: #3ef2a6;
+  --success-suave: rgba(62, 242, 166, .14);
+  --aviso: #ffcf4d;
+  --vidro: rgba(8, 13, 24, .82);
+  --modal-fondo: rgba(2, 5, 12, .8);
+  --sombra: 0 0 0 1px rgba(80, 220, 255, .16), 0 12px 30px rgba(0, 0, 0, .6);
+}
+
+[data-estilo="hud"] {
+  --fuente-mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", monospace;
+}
+[data-estilo="hud"] body {
+  background: var(--bg);
+  font-family: var(--fuente-mono);
+  font-variant-ligatures: none;
+}
+/* Rejilla técnica de fondo */
+[data-estilo="hud"] body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, rgba(80, 220, 255, .06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(80, 220, 255, .06) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 85%);
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 0%, #000 20%, transparent 85%);
+}
+[data-estilo="hud"] #root { position: relative; z-index: 1; }
+
+[data-estilo="hud"] .app-header,
+[data-estilo="hud"] .mes-nav,
+[data-estilo="hud"] .filtros-bar,
+[data-estilo="hud"] .view-tabs,
+[data-estilo="hud"] .card-titulo,
+[data-estilo="hud"] .modal-titulo,
+[data-estilo="hud"] .evento-grupo-fecha,
+[data-estilo="hud"] .stat-etiqueta,
+[data-estilo="hud"] .user-badge,
+[data-estilo="hud"] .nota-autor,
+[data-estilo="hud"] .cierre-chip,
+[data-estilo="hud"] .evento-card-badge {
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+}
+[data-estilo="hud"] .mes-nav h2,
+[data-estilo="hud"] .login-card h1,
+[data-estilo="hud"] .app-header h1 { font-weight: 700; letter-spacing: 0.06em; }
+[data-estilo="hud"] .dia-numero,
+[data-estilo="hud"] .meta-num,
+[data-estilo="hud"] .cierre-horas,
+[data-estilo="hud"] .stat-valor,
+[data-estilo="hud"] .ajustes-item-valor,
+[data-estilo="hud"] .linea-fecha,
+[data-estilo="hud"] .semana-cifras { font-variant-numeric: tabular-nums; }
+
+/* Esquinas rectas, filetes luminosos */
+[data-estilo="hud"] .ajustes-card,
+[data-estilo="hud"] .evento-card,
+[data-estilo="hud"] .login-card,
+[data-estilo="hud"] .modal-card,
+[data-estilo="hud"] .toast,
+[data-estilo="hud"] .nota-item,
+[data-estilo="hud"] .stat-caja,
+[data-estilo="hud"] .semana-bloque {
+  border-radius: 2px;
+  border: 1px solid var(--border);
+  box-shadow: var(--sombra);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+[data-estilo="hud"] .evento-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--primary) 45%, transparent),
+              0 0 22px color-mix(in srgb, var(--primary) 22%, transparent);
+}
+[data-estilo="hud"] .modal-card { border-radius: 3px; }
+
+[data-estilo="hud"] .filtro-chip,
+[data-estilo="hud"] .user-badge,
+[data-estilo="hud"] .evento-card-badge,
+[data-estilo="hud"] .chip-revisar,
+[data-estilo="hud"] .evento-card-origen-moodle,
+[data-estilo="hud"] .contador { border-radius: 2px; }
+
+[data-estilo="hud"] .btn,
+[data-estilo="hud"] .btn-filled,
+[data-estilo="hud"] .btn-icon,
+[data-estilo="hud"] .opcion-tema,
+[data-estilo="hud"] .mes-nav button,
+[data-estilo="hud"] .cierre-check { border-radius: 2px; }
+[data-estilo="hud"] .btn-filled,
+[data-estilo="hud"] .opcion-tema.activo {
+  background: transparent;
+  color: var(--primary);
+  border-color: var(--primary);
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--primary) 18%, transparent);
+}
+[data-estilo="hud"] .btn-filled:hover,
+[data-estilo="hud"] .opcion-tema.activo:hover { color: var(--primary-hover); }
+
+/* Cabeceras como barras de instrumentos */
+[data-estilo="hud"] .app-header,
+[data-estilo="hud"] .view-tabs,
+[data-estilo="hud"] .filtros-bar,
+[data-estilo="hud"] .mes-nav {
+  background: var(--vidro);
+  border-bottom: 1px solid var(--border);
+}
+[data-estilo="hud"] .view-tab.active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--primary) 60%, transparent);
+}
+
+/* Calendario: hoy y celdas con halo */
+[data-estilo="hud"] .dia-celda { border-color: var(--border-suave); }
+[data-estilo="hud"] .dia-celda:hover { background: rgba(34, 211, 238, .06); }
+[data-estilo="hud"] .dia-celda.hoy .dia-numero {
+  background: transparent;
+  color: var(--primary);
+  box-shadow: inset 0 0 0 1px var(--primary), 0 0 14px color-mix(in srgb, var(--primary) 40%, transparent);
+}
+[data-estilo="hud"] .dia-evento-mini {
+  border-radius: 2px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 14px -4px currentColor;
+}
+
+/* Colores de módulo como neón */
+[data-estilo="hud"] .evento-card-color { box-shadow: 0 0 12px -1px currentColor; }
+[data-estilo="hud"] .pulso,
+[data-estilo="hud"] .punto { box-shadow: 0 0 10px currentColor; }
+[data-estilo="hud"] .barra-relleno { box-shadow: 0 0 14px -2px currentColor; }
+[data-estilo="hud"] .stat-caja {
+  background: color-mix(in srgb, var(--tinte) 9%, var(--bg-card));
+  border-top: 1px solid color-mix(in srgb, var(--tinte) 60%, transparent);
+  box-shadow: 0 0 24px -14px var(--tinte), var(--sombra);
+}
+[data-estilo="hud"] .stat-valor { color: var(--tinte); }
+
+[data-estilo="hud"] .fab {
+  border-radius: 2px;
+  background: var(--bg-card);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  box-shadow: 0 0 22px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+[data-estilo="hud"] .fab:hover { background: var(--primary-suave); }
+
+[data-estilo="hud"] .banner { border-left-width: 2px; }
+[data-estilo="hud"] .banner-alerta { background: color-mix(in srgb, var(--danger) 12%, transparent); }
+[data-estilo="hud"] .banner-cierre.critico  { background: color-mix(in srgb, #ff5470 12%, transparent); }
+[data-estilo="hud"] .banner-cierre.urgente  { background: color-mix(in srgb, #ffcf4d 12%, transparent); }
+[data-estilo="hud"] .banner-cierre.proximo  { background: color-mix(in srgb, var(--primary) 10%, transparent); }
+
+[data-estilo="hud"] .modal-body input,
+[data-estilo="hud"] .modal-body textarea,
+[data-estilo="hud"] .modal-body select {
+  border-radius: 2px;
+  border-color: var(--border);
+  background: #060b14;
+}
+[data-estilo="hud"] .modal-body input:focus,
+[data-estilo="hud"] .modal-body textarea:focus,
+[data-estilo="hud"] .modal-body select:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px var(--primary), 0 0 18px color-mix(in srgb, var(--primary) 25%, transparent);
+}
+[data-estilo="hud"] .descripcion-moodle,
+[data-estilo="hud"] .resumen-texto,
+[data-estilo="hud"] .bloque-url {
+  border-radius: 2px;
+  font-family: var(--fuente-mono);
+  background: #060b14;
+}
+
+[data-estilo="hud"] .login-card h1 { color: var(--primary); text-shadow: 0 0 18px color-mix(in srgb, var(--primary) 45%, transparent); }
+
+/* ============================================================
+   ADAPTACI�N AL SISTEMA DE TOKENS DEL REDISE�O
+   Los estilos de arriba definen los nombres antiguos; aqu� se
+   conectan con los tokens que usa la interfaz actual.
+   ============================================================ */
+[data-estilo="glass"],
+[data-estilo="neobrutalo"],
+[data-estilo="hud"] {
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-refuerzo);
+  --surface-3: var(--bg-refuerzo);
+  --border-strong: var(--border);
+  --primary-soft: var(--primary-suave);
+  --primary-text: var(--primary);
+  --danger-text: var(--danger);
+  --success-text: var(--success);
+  --warn-text: var(--aviso);
+  --warn-soft: color-mix(in srgb, var(--aviso) 16%, transparent);
+  --text-faint: var(--text-muted);
+  --bg-translucido: var(--vidro);
+  --velo: var(--modal-fondo);
+  --shadow: var(--sombra);
+  --shadow-sm: var(--sombra-suave, var(--sombra));
+}
+
+/* Neobrutalismo oscuro: el acento es claro, as� que el texto va en tinta. */
+[data-estilo="neobrutalo"][data-tema="oscuro"] .btn-primary,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .btn-filled,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .filtro-chip.active,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .fab,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .dia-celda.hoy .dia-numero {
+  color: #17130f;
+}
+
+/* HUD: el cian es muy claro para texto blanco encima. */
+[data-estilo="hud"] .btn-primary,
+[data-estilo="hud"] .btn-filled,
+[data-estilo="hud"] .filtro-chip.active {
+  color: #04121a;
+}

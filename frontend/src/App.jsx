@@ -14,6 +14,7 @@ import AlertaCierres from './AlertaCierres.jsx';
 import { MODULOS } from './modulos.js';
 import { IconoAjustes, IconoSalir, IconoMas, IconoCheck, IconoSol, IconoLuna } from './Icons.jsx';
 import { setTema, temaActual } from './tema.js';
+import { ESTILOS, setEstilo, estiloActual } from './estilos.js';
 import { supabase } from './supabase.js';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -54,6 +55,21 @@ export default function App() {
   // Al volver de Ajustes, el icono del tema refleja lo que se haya elegido allí
   useEffect(() => { setTemaEstado(temaActual()); }, [vista]);
   useEffect(() => { localStorage.setItem('caldaw_pend', soloPendientes ? '1' : '0'); }, [soloPendientes]);
+
+  // Ctrl+Shift+S cicla los estilos visuales para compararlos al vuelo
+  useEffect(() => {
+    function alPulsar(e) {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+        e.preventDefault();
+        const i = ESTILOS.findIndex(x => x.id === estiloActual());
+        const siguiente = ESTILOS[(i + 1) % ESTILOS.length];
+        setEstilo(siguiente.id);
+        mostrarAviso(`Estilo: ${siguiente.nombre} (${i + 2}/${ESTILOS.length})`);
+      }
+    }
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, []);
 
   useEffect(() => {
     if (!usuario) return;
