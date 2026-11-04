@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { CalendarDays } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -40,12 +39,18 @@ function Login({ onLogin }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1><CalendarDays size={22} /> Calendario DAW 2º</h1>
-        <p>Acceso para los 3 compañeros de clase</p>
+        <div className="login-marca">
+          <span className="marca-icono" aria-hidden="true" />
+          <span>Curso 2025 / 2026</span>
+        </div>
+
+        <h1>Calendario DAW 2º</h1>
+        <p className="login-sub">Acceso para los tres compañeros de clase</p>
 
         <form onSubmit={handleSubmit}>
-          <label>Nombre</label>
+          <label htmlFor="login-nombre">Nombre</label>
           <input
+            id="login-nombre"
             type="text"
             value={nombre}
             onChange={e => setNombre(e.target.value)}
@@ -54,8 +59,9 @@ function Login({ onLogin }) {
             maxLength={30}
           />
 
-          <label>Código de sala</label>
+          <label htmlFor="login-sala">Código de sala</label>
           <input
+            id="login-sala"
             type="password"
             value={codigoSala}
             onChange={e => setCodigoSala(e.target.value)}
@@ -66,7 +72,7 @@ function Login({ onLogin }) {
           {error && <p className="login-error">{error}</p>}
 
           <button className="btn-primary" type="submit" disabled={cargando}>
-            {cargando ? 'Entrando...' : 'Entrar'}
+            {cargando ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
       </div>

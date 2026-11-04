@@ -1,0 +1,627 @@
+From 472bbff4375651e5c68d9aca121bc71df15541b0 Mon Sep 17 00:00:00 2001
+From: barbadodev <barbadodev@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 02:40:58 +0100
+Subject: [PATCH] feat(ui): estilo macOS (segmented control, hairlines, chips
+ pastel) + chips con --tinte reutilizable
+
+---
+ frontend/src/AlertaCierres.jsx |   2 +-
+ frontend/src/App.jsx           |   5 +-
+ frontend/src/Calendario.jsx    |   4 +-
+ frontend/src/ListaEventos.jsx  |   2 +-
+ frontend/src/NotasModulo.jsx   |  41 +++--
+ frontend/src/VistaSemanal.jsx  |   7 +-
+ frontend/src/estilos.css       | 312 ++++++++++++++++++++++++++++++++-
+ frontend/src/estilos.js        |   1 +
+ frontend/src/index.css         |  48 +++++
+ 9 files changed, 390 insertions(+), 32 deletions(-)
+
+diff --git a/frontend/src/AlertaCierres.jsx b/frontend/src/AlertaCierres.jsx
+index ce3df26..313c785 100644
+--- a/frontend/src/AlertaCierres.jsx
++++ b/frontend/src/AlertaCierres.jsx
+@@ -62,7 +62,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
+             const mod = MODULOS.find(m => m.id === c.modulo_id) || { nombre: String(c.modulo_id || '?').toUpperCase(), color: '#6b7280' };
+             return (
+               <div key={c.id} className={`cierre-fila ${c.nivel}`}>
+-                <span className="cierre-chip" style={{ background: mod.color }}>{mod.nombre}</span>
++                <span className="cierre-chip" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
+                 <span className="cierre-titulo">{c.titulo}</span>
+                 <span className="cierre-horas">{textoHoras(c)}</span>
+                 {c.enlace && (
+diff --git a/frontend/src/App.jsx b/frontend/src/App.jsx
+index 1d0b6f7..bf80ddd 100644
+--- a/frontend/src/App.jsx
++++ b/frontend/src/App.jsx
+@@ -233,15 +233,14 @@ export default function App() {
+ 
+       <div className="filtros-bar">
+         <button className={`filtro-chip ${filtroModulo === 'todos' ? 'active' : ''}`}
+-          style={filtroModulo === 'todos' ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+           onClick={() => setFiltroModulo('todos')}>Todos</button>
+         {MODULOS.map(m => (
+           <button key={m.id} className={`filtro-chip ${filtroModulo === m.id ? 'active' : ''}`}
+-            style={filtroModulo === m.id ? { background: m.color, borderColor: m.color } : {}}
++            style={{ '--tinte': m.color }}
+             onClick={() => setFiltroModulo(m.id)}>{m.nombre}</button>
+         ))}
+         <button className={`filtro-chip ${soloPendientes ? 'active' : ''}`}
+-          style={soloPendientes ? { background: 'var(--success)', borderColor: 'var(--success)' } : {}}
++          style={{ '--tinte': 'var(--success)' }}
+           onClick={() => setSoloPendientes(v => !v)}><Check size={11} strokeWidth={3} /> Pendientes</button>
+       </div>
+ 
+diff --git a/frontend/src/Calendario.jsx b/frontend/src/Calendario.jsx
+index 254f4c8..1577d6b 100644
+--- a/frontend/src/Calendario.jsx
++++ b/frontend/src/Calendario.jsx
+@@ -93,7 +93,7 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
+                           <div
+                             key={ev.id}
+                             className="dia-evento-mini"
+-                            style={{ background: mod.color }}
++                            style={{ '--tinte': mod.color }}
+                             onClick={(e) => { e.stopPropagation(); onEventoClick(ev); }}
+                           >
+                             {ev.titulo}
+@@ -135,7 +135,7 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
+                       {ev.todo_el_dia ? <CalendarDays size={12} /> : format(parseISO(ev.fecha_inicio), 'HH:mm')}
+                     </span>
+                     <span className="hoja-evento-titulo">{ev.titulo}</span>
+-                    <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>
++                    <span className="chip-modulo" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
+                   </button>
+                 );
+               })}
+diff --git a/frontend/src/ListaEventos.jsx b/frontend/src/ListaEventos.jsx
+index 7d350fe..6d112b7 100644
+--- a/frontend/src/ListaEventos.jsx
++++ b/frontend/src/ListaEventos.jsx
+@@ -81,7 +81,7 @@ export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar
+                       <span className="meta-item">
+                         <IconoTipo tipoId={ev.tipo_id} size={13} /> {NOMBRES_TIPO[ev.tipo_id] || 'Otro'}
+                       </span>
+-                      <span className="evento-card-badge" style={{ background: mod.color }}>{mod.nombre}</span>
++                      <span className="chip-modulo" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
+                       {!ev.todo_el_dia && <span className="meta-num">{format(parseISO(ev.fecha_inicio), 'HH:mm')}</span>}
+                       {ev.enlace && (
+                         <a href={ev.enlace} target="_blank" rel="noreferrer"
+diff --git a/frontend/src/NotasModulo.jsx b/frontend/src/NotasModulo.jsx
+index 838f3bb..b38da51 100644
+--- a/frontend/src/NotasModulo.jsx
++++ b/frontend/src/NotasModulo.jsx
+@@ -15,6 +15,8 @@ export default function NotasModulo({ usuario }) {
+       const res = await fetch(`${API}/api/notas-modulo/${sel}?sala=${usuario.codigo_sala}`);
+       const data = await res.json();
+       setNotas(data.notas || []);
++    } catch {
++      setNotas([]);
+     } finally {
+       setCargando(false);
+     }
+@@ -37,35 +39,40 @@ export default function NotasModulo({ usuario }) {
+ 
+   return (
+     <div className="eventos-lista">
+-      <div className="filtros-bar" style={{ margin: '-1rem -1rem 1rem -1rem', border: 'none', borderBottom: '1px solid var(--border)' }}>
++      <div className="filtros-bar filtros-bar-interna">
+         {MODULOS.map(m => (
+           <button key={m.id}
+             className={`filtro-chip ${sel === m.id ? 'active' : ''}`}
+-            style={sel === m.id ? { background: m.color, borderColor: m.color } : {}}
++            style={{ '--tinte': m.color }}
+             onClick={() => setSel(m.id)}>{m.nombre}</button>
+         ))}
+       </div>
+ 
+-      <div className="ajustes-card" style={{ borderLeft: `4px solid ${mod.color}` }}>
++      <div className="ajustes-card notas-card" style={{ '--tinte': mod.color }}>
+         <h3>Notas de {mod.nombre}</h3>
+-        <form onSubmit={crearNota} style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
++        <form onSubmit={crearNota} className="nota-form">
+           <input type="text" value={nuevo} onChange={e => setNuevo(e.target.value)}
+-            placeholder="Nuevo apunte, recordatorio, duda..."
+-            style={{ flex: 1, padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }} />
++            placeholder="Nuevo apunte, recordatorio, duda…" className="nota-input" />
+           <button type="submit" className="btn btn-filled">Añadir</button>
+         </form>
+ 
+-        {cargando ? <p style={{ color: 'var(--text-muted)' }}>Cargando...</p> : (
+-          <div style={{ marginTop: '1rem' }}>
+-            {notas.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Aún no hay notas en este módulo.</p> :
+-              notas.map(n => (
+-                <div key={n.id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '0.5rem 0.75rem', borderRadius: 6, marginBottom: 6 }}>
+-                  <div className="nota-meta"><span className="nota-nombre">{n.usuarios?.nombre || 'Anónimo'}</span> · {new Date(n.created_at).toLocaleString('es-ES')}</div>
+-                  <div style={{ fontSize: '0.875rem', marginTop: 2, whiteSpace: 'pre-wrap' }}>{n.contenido}</div>
+-                </div>
+-              ))}
+-          </div>
+-        )}
++        {cargando
++          ? <p className="ayuda">Cargando…</p>
++          : notas.length === 0
++            ? <p className="ayuda">Aún no hay notas en este módulo.</p>
++            : (
++              <div className="notas-lista">
++                {notas.map(n => (
++                  <div key={n.id} className="nota-item">
++                    <div className="nota-meta">
++                      <span className="nota-nombre">{n.usuarios?.nombre || 'Anónimo'}</span>
++                      {' · '}{new Date(n.created_at).toLocaleString('es-ES')}
++                    </div>
++                    <div className="nota-contenido">{n.contenido}</div>
++                  </div>
++                ))}
++              </div>
++            )}
+       </div>
+     </div>
+   );
+diff --git a/frontend/src/VistaSemanal.jsx b/frontend/src/VistaSemanal.jsx
+index cf17c3a..860b9ae 100644
+--- a/frontend/src/VistaSemanal.jsx
++++ b/frontend/src/VistaSemanal.jsx
+@@ -58,7 +58,7 @@ export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
+                       {ev.todo_el_dia ? <CalendarDays size={12} /> : format(parseISO(ev.fecha_inicio), 'HH:mm')}
+                     </span>
+                     <span className="agenda-evento-titulo">{ev.titulo}</span>
+-                    <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>
++                    <span className="chip-modulo" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
+                   </button>
+                 );
+               })}
+@@ -97,10 +97,9 @@ export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
+                 const mod = getModulo(ev.modulo_id);
+                 return (
+                   <div key={ev.id} onClick={(e) => { e.stopPropagation(); onEventoClick(ev); }}
++                    className="celda-evento"
+                     style={{
+-                      background: mod.color, color: 'white',
+-                      padding: '3px 6px', borderRadius: 4, fontSize: '0.7rem',
+-                      marginBottom: 3, cursor: 'pointer',
++                      '--tinte': mod.color,
+                       textDecoration: ev.completado ? 'line-through' : 'none',
+                       opacity: ev.completado ? 0.5 : 1,
+                     }}>
+diff --git a/frontend/src/estilos.css b/frontend/src/estilos.css
+index f6b087b..a071ab7 100644
+--- a/frontend/src/estilos.css
++++ b/frontend/src/estilos.css
+@@ -1,11 +1,315 @@
+-/* ============================================================
++﻿/* ============================================================
+    ESTILOS VISUALES ALTERNATIVOS
+    Se activan con <html data-estilo="...">.
+    El estilo "limpio" no tiene reglas: es el index.css base.
+    ============================================================ */
+ 
+ /* ------------------------------------------------------------
+-   1) VISION GLASS — vidrio fuerte + aurora de fondo
++   1) macOS — system style de Apple
++   Tipografía del sistema, hairlines, segmented control,
++   chips pastel con texto oscuro.
++   ------------------------------------------------------------ */
++[data-estilo="macos"][data-tema] {
++  --bg: #12151b;
++  --bg-surface: #1a1e26;
++  --bg-card: #222834;
++  --bg-refuerzo: #2c3342;
++  --text: #f2f4f8;
++  --text-muted: #8b93a5;
++  --primary: #0a84ff;
++  --primary-hover: #409cff;
++  --primary-suave: rgba(10, 132, 255, .18);
++  --border: rgba(255, 255, 255, .09);
++  --border-suave: rgba(255, 255, 255, .055);
++  --danger: #ff453a;
++  --success: #32d74b;
++  --success-suave: rgba(50, 215, 75, .16);
++  --aviso: #ffd60a;
++  --vidro: rgba(26, 30, 38, .78);
++  --modal-fondo: rgba(0, 0, 0, .5);
++  --sombra: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 30px rgba(0, 0, 0, .45);
++  --sombra-suave: 0 1px 2px rgba(0, 0, 0, .3);
++}
++
++[data-estilo="macos"][data-tema="claro"] {
++  --bg: #f5f5f7;
++  --bg-surface: #ffffff;
++  --bg-card: #ffffff;
++  --bg-refuerzo: #ececf0;
++  --text: #1d1d1f;
++  --text-muted: #6e6e73;
++  --primary: #007aff;
++  --primary-hover: #0062cc;
++  --primary-suave: rgba(0, 122, 255, .10);
++  --border: rgba(0, 0, 0, .09);
++  --border-suave: rgba(0, 0, 0, .055);
++  --danger: #ff3b30;
++  --success: #34c759;
++  --success-suave: rgba(52, 199, 89, .12);
++  --aviso: #ff9500;
++  --vidro: rgba(255, 255, 255, .8);
++  --modal-fondo: rgba(0, 0, 0, .28);
++  --sombra: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 30px rgba(0, 0, 0, .10);
++  --sombra-suave: 0 1px 2px rgba(0, 0, 0, .06);
++}
++
++[data-estilo="macos"] {
++  --fuente-sistema: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
++  --fuente-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
++}
++[data-estilo="macos"] body {
++  font-family: var(--fuente-sistema);
++  -webkit-font-smoothing: antialiased;
++  letter-spacing: -0.01em;
++}
++
++/* Titulares con la métrica de Apple: grande y de peso medio */
++[data-estilo="macos"] h1, [data-estilo="macos"] h2, [data-estilo="macos"] h3 { font-family: var(--fuente-display); }
++[data-estilo="macos"] .mes-nav h2 {
++  font-size: 1.375rem; font-weight: 600;
++  letter-spacing: -0.022em;
++}
++[data-estilo="macos"] .app-header h1 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
++[data-estilo="macos"] .card-titulo { font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.015em; }
++[data-estilo="macos"] .modal-titulo { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
++[data-estilo="macos"] .evento-card-titulo { font-weight: 600; letter-spacing: -0.015em; }
++[data-estilo="macos"] .login-card h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; }
++
++/* Trazo más fino: la elegancia de Apple está en el grosor del icono */
++[data-estilo="macos"] svg { stroke-width: 1.6; }
++[data-estilo="macos"] .cierre-check svg,
++[data-estilo="macos"] .evento-check svg { stroke-width: 2.4; }
++
++/* Radios de sistema: 10px componentes, 12px tarjetas, 16px paneles */
++[data-estilo="macos"] .ajustes-card,
++[data-estilo="macos"] .evento-card,
++[data-estilo="macos"] .nota-item,
++[data-estilo="macos"] .stat-caja,
++[data-estilo="macos"] .semana-bloque,
++[data-estilo="macos"] .bloque-url,
++[data-estilo="macos"] .resumen-texto,
++[data-estilo="macos"] .descripcion-moodle {
++  border-radius: 12px;
++  border: 1px solid var(--border-suave);
++  box-shadow: var(--sombra-suave);
++  backdrop-filter: none;
++  -webkit-backdrop-filter: none;
++}
++[data-estilo="macos"] .ajustes-card { background: var(--bg-card); }
++[data-estilo="macos"] .modal-card { border-radius: 16px; box-shadow: var(--sombra); border-color: var(--border); }
++[data-estilo="macos"] .login-card { border-radius: 16px; box-shadow: var(--sombra); }
++[data-estilo="macos"] .toast { border-radius: 11px; box-shadow: var(--sombra); }
++
++/* Cabecera y barras: solo un hairline, sin bloques de color */
++[data-estilo="macos"] .app-header,
++[data-estilo="macos"] .filtros-bar,
++[data-estilo="macos"] .mes-nav {
++  background: var(--vidro);
++  backdrop-filter: blur(20px) saturate(1.8);
++  -webkit-backdrop-filter: blur(20px) saturate(1.8);
++  border-bottom: 1px solid var(--border-suave);
++}
++[data-estilo="macos"] .user-badge {
++  font-size: 0.6875rem; font-weight: 500;
++  background: var(--bg-refuerzo);
++  color: var(--text-muted);
++  border-radius: 5px;
++  padding: 2px 7px;
++}
++
++/* SEGMENTED CONTROL — el sello de Apple en las pestañas de vista */
++[data-estilo="macos"] .view-tabs {
++  gap: 0.125rem;
++  display: flex;
++  width: fit-content;
++  margin: 10px 16px 0;
++  padding: 2px;
++  background: var(--bg-card);
++  border: 1px solid var(--border-suave);
++  border-radius: 9px;
++}
++[data-estilo="macos"] .view-tab {
++  font-size: 0.8125rem;
++  flex: 0 0 auto;
++  padding: 4px 12px;
++  border-radius: 7px;
++  border: none;
++  background: transparent;
++  color: var(--text-muted);
++  font-weight: 500;
++}
++[data-estilo="macos"] .view-tab.active {
++  background: color-mix(in srgb, var(--text) 14%, var(--bg-card));
++  color: var(--text);
++  box-shadow: var(--sombra-suave);
++}
++[data-estilo="macos"] .filtros-bar { margin-top: 8px; border-top: none; }
++
++/* Chips pastel con texto oscuro, como las notas adhesivas de la captura */
++[data-estilo="macos"] .chip-modulo,
++[data-estilo="macos"] .cierre-chip,
++[data-estilo="macos"] .dia-evento-mini,
++[data-estilo="macos"] .celda-evento {
++  background: color-mix(in srgb, var(--tinte) 30%, #f2f5fa);
++  color: #14171d;
++  border: 1px solid color-mix(in srgb, var(--tinte) 42%, transparent);
++  font-weight: 600;
++  text-shadow: none;
++}
++[data-estilo="macos"] .dia-evento-mini,
++[data-estilo="macos"] .celda-evento { border-radius: 5px; }
++
++[data-estilo="macos"] .filtro-chip {
++  border: 1px solid var(--border);
++  background: transparent;
++  color: var(--text-muted);
++  font-weight: 500;
++  border-radius: 7px;
++}
++[data-estilo="macos"] .filtro-chip:hover { background: var(--bg-card); color: var(--text); }
++[data-estilo="macos"] .filtro-chip.active {
++  background: color-mix(in srgb, var(--tinte, var(--primary)) 20%, var(--bg-card));
++  color: var(--text);
++  border-color: color-mix(in srgb, var(--tinte, var(--primary)) 45%, transparent);
++}
++
++/* Calendario: rejilla casi invisible, hoy como punto de sistema */
++[data-estilo="macos"] .calendario-grid { border-color: var(--border-suave); }
++[data-estilo="macos"] .dia-celda,
++[data-estilo="macos"] .dia-cabecera { border-color: var(--border-suave); }
++[data-estilo="macos"] .dia-cabecera { background: transparent; font-weight: 500; }
++[data-estilo="macos"] .dia-celda:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
++[data-estilo="macos"] .dia-numero { color: var(--text-muted); font-weight: 500; font-variant-numeric: tabular-nums; }
++[data-estilo="macos"] .dia-celda.hoy .dia-numero {
++  background: var(--primary);
++  color: #fff;
++  font-weight: 600;
++}
++
++/* Botones del sistema */
++[data-estilo="macos"] .btn,
++[data-estilo="macos"] .btn-icon,
++[data-estilo="macos"] .mes-nav button,
++[data-estilo="macos"] .opcion-tema {
++  border-radius: 8px;
++  border: 1px solid var(--border);
++  background: var(--bg-card);
++  color: var(--text);
++  font-weight: 500;
++  box-shadow: none;
++}
++[data-estilo="macos"] .btn:hover,
++[data-estilo="macos"] .btn-icon:hover,
++[data-estilo="macos"] .mes-nav button:hover { background: var(--bg-refuerzo); }
++[data-estilo="macos"] .btn-filled,
++[data-estilo="macos"] .btn-moodle,
++[data-estilo="macos"] .login-card .btn-primary,
++[data-estilo="macos"] .opcion-tema.activo {
++  background: var(--primary);
++  border-color: transparent;
++  color: #fff;
++  font-weight: 600;
++}
++[data-estilo="macos"] .btn-filled:hover,
++[data-estilo="macos"] .btn-moodle:hover { background: var(--primary-hover); }
++[data-estilo="macos"] .btn-danger { background: transparent; border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
++[data-estilo="macos"] .btn-danger:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); filter: none; }
++
++[data-estilo="macos"] .fab {
++  border-radius: 999px;
++  background: var(--primary);
++  box-shadow: 0 4px 14px rgba(0, 0, 0, .3), 0 0 0 1px color-mix(in srgb, #fff 12%, transparent) inset;
++}
++[data-estilo="macos"] .fab:hover { background: var(--primary-hover); transform: none; }
++
++/* Inputs: fondo hundido suave, foco de sistema */
++[data-estilo="macos"] .modal-body input,
++[data-estilo="macos"] .modal-body textarea,
++[data-estilo="macos"] .modal-body select,
++[data-estilo="macos"] .nota-input,
++[data-estilo="macos"] .login-card input {
++  border-radius: 8px;
++  border: 1px solid var(--border);
++  background: color-mix(in srgb, var(--bg) 65%, var(--bg-surface));
++}
++[data-estilo="macos"] .modal-body input:focus,
++[data-estilo="macos"] .modal-body textarea:focus,
++[data-estilo="macos"] .modal-body select:focus,
++[data-estilo="macos"] .nota-input:focus,
++[data-estilo="macos"] .login-card input:focus {
++  border-color: var(--primary);
++  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--primary) 26%, transparent);
++  outline: none;
++}
++[data-estilo="macos"] .modal-body label,
++[data-estilo="macos"] .login-card label {
++  font-weight: 500;
++  text-transform: none;
++  letter-spacing: 0;
++  font-size: 0.75rem;
++}
++
++/* Listas y detalles */
++[data-estilo="macos"] .evento-card { background: var(--bg-card); }
++[data-estilo="macos"] .evento-card:hover { background: var(--bg-refuerzo); border-color: var(--border-suave); }
++[data-estilo="macos"] .evento-card-color { width: 3px; border-radius: 2px; opacity: .85; }
++[data-estilo="macos"] .evento-check { border-radius: 5px; }
++[data-estilo="macos"] .grupo-hoy { color: var(--primary); }
++[data-estilo="macos"] .evento-card-origen-moodle {
++  background: var(--primary-suave);
++  color: var(--primary);
++  border-radius: 5px;
++  font-weight: 600;
++}
++[data-estilo="macos"] .chip-revisar {
++  background: color-mix(in srgb, var(--aviso) 18%, transparent);
++  color: var(--aviso);
++  border-radius: 5px;
++}
++[data-estilo="macos"] .linea-titulo, [data-estilo="macos"] .cierre-titulo { letter-spacing: -0.01em; }
++
++/* Banners: tintados suaves, sin bordes duros */
++[data-estilo="macos"] .banner { border-left: none; padding: 0.6rem 1rem; }
++[data-estilo="macos"] .banner-cierre.critico { background: color-mix(in srgb, var(--danger) 16%, var(--bg-surface)); }
++[data-estilo="macos"] .banner-cierre.urgente { background: color-mix(in srgb, var(--aviso) 16%, var(--bg-surface)); }
++[data-estilo="macos"] .banner-cierre.proximo { background: color-mix(in srgb, var(--primary) 12%, var(--bg-surface)); }
++[data-estilo="macos"] .banner-cierre.critico .banner-icono { color: var(--danger); }
++[data-estilo="macos"] .banner-cierre.urgente .banner-icono { color: var(--aviso); }
++[data-estilo="macos"] .banner-alerta { background: color-mix(in srgb, var(--danger) 14%, var(--bg-surface)); }
++
++/* Estadísticas y plan: cifras grandes y discretas */
++[data-estilo="macos"] .stat-caja {
++  background: var(--bg-card);
++  border-top: 1px solid var(--border-suave);
++}
++[data-estilo="macos"] .stat-valor {
++  font-size: 1.75rem; font-weight: 600;
++  color: var(--text);
++  letter-spacing: -0.03em;
++  font-variant-numeric: tabular-nums;
++}
++[data-estilo="macos"] .semana-bloque { background: var(--bg-card); border-left-width: 3px; }
++[data-estilo="macos"] .barra-carga { background: var(--bg-refuerzo); }
++[data-estilo="macos"] .pulso.alta, [data-estilo="macos"] .barra-relleno.alta { background: var(--danger); }
++[data-estilo="macos"] .pulso.media, [data-estilo="macos"] .barra-relleno.media { background: var(--aviso); }
++[data-estilo="macos"] .pulso.baja, [data-estilo="macos"] .barra-relleno.baja { background: var(--success); }
++[data-estilo="macos"] .semana-titulo { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
++
++/* Selector de estilo/tema como rejilla de opciones del sistema */
++[data-estilo="macos"] .opcion-tema {
++  border-radius: 9px;
++  background: color-mix(in srgb, var(--bg) 65%, var(--bg-surface));
++}
++[data-estilo="macos"] .opcion-tema.activo {
++  background: var(--primary);
++  color: #fff;
++  border-color: transparent;
++  box-shadow: 0 1px 6px color-mix(in srgb, var(--primary) 45%, transparent);
++}
++[data-estilo="macos"] .notas-card { border-left: 3px solid var(--tinte); }
++
++/* ------------------------------------------------------------
++   2) VISION GLASS — vidrio fuerte + aurora de fondo
+    ------------------------------------------------------------ */
+ [data-estilo="glass"][data-tema] {
+   --bg: #0b1020;
+@@ -115,7 +419,7 @@
+ [data-estilo="glass"] .pulso { box-shadow: 0 0 12px currentColor; }
+ 
+ /* ------------------------------------------------------------
+-   2) NEOBRUTALISMO — bordes de tinta, sombras duras, planos
++   3) NEOBRUTALISMO — bordes de tinta, sombras duras, planos
+    ------------------------------------------------------------ */
+ [data-estilo="neobrutalo"][data-tema] {
+   --bg: #f7edd6;
+@@ -303,7 +607,7 @@
+ [data-estilo="neobrutalo"] .selector-tema .opcion-tema.activo { background: var(--text); color: var(--bg); border-color: var(--border); }
+ 
+ /* ------------------------------------------------------------
+-   3) HUD NEÓN — panel técnico, monoespaciado, glow
++   4) HUD NEÓN — panel técnico, monoespaciado, glow
+    ------------------------------------------------------------ */
+ [data-estilo="hud"][data-tema] {
+   --bg: #04060c;
+diff --git a/frontend/src/estilos.js b/frontend/src/estilos.js
+index 380f293..3f5fa5b 100644
+--- a/frontend/src/estilos.js
++++ b/frontend/src/estilos.js
+@@ -3,6 +3,7 @@
+ 
+ export const ESTILOS = [
+   { id: 'limpio',      nombre: 'Actual',        descripcion: 'Sobrio, glass suave' },
++  { id: 'macos',       nombre: 'macOS',         descripcion: 'Apple minimal, segmented, hairlines' },
+   { id: 'glass',       nombre: 'Vision Glass',  descripcion: 'Vidro forte + aurora' },
+   { id: 'neobrutalo',  nombre: 'Neobrutalismo', descripcion: 'Bordes gruesos y sombras duras' },
+   { id: 'hud',         nombre: 'HUD Neón',      descripcion: 'Panel técnico oscuro' },
+diff --git a/frontend/src/index.css b/frontend/src/index.css
+index bb12b89..55ab92b 100644
+--- a/frontend/src/index.css
++++ b/frontend/src/index.css
+@@ -244,6 +244,7 @@ input, textarea, select {
+ .filtro-chip.active {
+   color: white;
+   border-color: transparent;
++  background: var(--tinte, var(--primary));
+ }
+ 
+ /* ====== NAVEGACIÓN MES ====== */
+@@ -334,6 +335,7 @@ input, textarea, select {
+ }
+ 
+ .dia-evento-mini {
++  background: var(--tinte);
+   font-size: 0.625rem;
+   padding: 0.125rem 0.25rem;
+   border-radius: 3px;
+@@ -435,6 +437,13 @@ input, textarea, select {
+   color: var(--text-muted);
+ }
+ 
++/* Chips de módulo: el color llega por --tinte desde React,
++   así cada estilo puede decidir si lo pinta sólido, pastel o con halo. */
++.chip-modulo {
++  background: var(--tinte);
++  color: #fff;
++}
++
+ .evento-card-origen-moodle {
+   font-size: 0.625rem;
+   padding: 0.125rem 0.5rem;
+@@ -1068,6 +1077,7 @@ input, textarea, select {
+   @apply flex items-center gap-2 pl-1 text-[0.78rem] min-w-0;
+ }
+ .cierre-chip {
++  background: var(--tinte);
+   @apply shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] font-semibold text-white;
+ }
+ .cierre-titulo {
+@@ -1215,6 +1225,44 @@ input, textarea, select {
+ .girando { animation: girar 1s linear infinite; }
+ @keyframes girar { to { transform: rotate(360deg); } }
+ 
++/* --- Celda de evento en la vista semanal de escritorio --- */
++.celda-evento {
++  display: block;
++  width: 100%;
++  background: var(--tinte);
++  color: #fff;
++  padding: 3px 6px;
++  border-radius: 4px;
++  font-size: 0.7rem;
++  margin-bottom: 3px;
++  cursor: pointer;
++  border: none;
++  text-align: left;
++  white-space: nowrap;
++  overflow: hidden;
++  text-overflow: ellipsis;
++}
++
++/* --- Barra de filtros incrustada (pestaña Notas) --- */
++.filtros-bar-interna {
++  margin: -1rem -1rem 1rem;
++  border: none;
++  border-bottom: 1px solid var(--border);
++}
++
++/* --- Ficha de módulo en Notas --- */
++.notas-card { border-left: 4px solid var(--tinte); }
++.notas-card .nota-form { margin-top: 0.75rem; }
++.nota-input {
++  flex: 1;
++  padding: 0.5rem;
++  background: var(--bg);
++  border: 1px solid var(--border);
++  border-radius: 6px;
++  color: var(--text);
++}
++.notas-lista { margin-top: 1rem; }
++
+ /* ====== TOAST de confirmación en pantalla ====== */
+ /* Va arriba para no tapar el botón + ni el contenido al hacer scroll */
+ .toast {
+-- 
+2.53.0.windows.1
+

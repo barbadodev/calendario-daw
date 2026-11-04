@@ -7,306 +7,273 @@
 /* ------------------------------------------------------------
    1) macOS — system style de Apple
    Tipografía del sistema, hairlines, segmented control,
-   chips pastel con texto oscuro.
+   radios 8-12px, azul de sistema. Habla en los tokens del
+   rediseño (--surface, --border-strong, --velo…), sin puente.
    ------------------------------------------------------------ */
-[data-estilo="macos"][data-tema] {
-  --bg: #12151b;
-  --bg-surface: #1a1e26;
-  --bg-card: #222834;
-  --bg-refuerzo: #2c3342;
-  --text: #f2f4f8;
-  --text-muted: #8b93a5;
+[data-estilo="macos"][data-tema="oscuro"] {
+  --bg: #1c1c1e;
+  --surface: #2c2c2e;
+  --surface-2: #3a3a3c;
+  --surface-3: #48484a;
+  --text: #f2f2f7;
+  --text-muted: #98989f;
+  --text-faint: #7c7c83;
   --primary: #0a84ff;
   --primary-hover: #409cff;
-  --primary-suave: rgba(10, 132, 255, .18);
-  --border: rgba(255, 255, 255, .09);
-  --border-suave: rgba(255, 255, 255, .055);
+  --primary-soft: #0b3a66;
+  --primary-text: #409cff;
+  --border: #3a3a3c;
+  --border-strong: #48484a;
   --danger: #ff453a;
+  --danger-text: #ff6961;
   --success: #32d74b;
-  --success-suave: rgba(50, 215, 75, .16);
-  --aviso: #ffd60a;
-  --vidro: rgba(26, 30, 38, .78);
-  --modal-fondo: rgba(0, 0, 0, .5);
-  --sombra: 0 1px 2px rgba(0, 0, 0, .35), 0 10px 30px rgba(0, 0, 0, .45);
-  --sombra-suave: 0 1px 2px rgba(0, 0, 0, .3);
+  --success-text: #30d158;
+  --warn: #ffd60a;
+  --warn-text: #ffd60a;
+  --warn-soft: #3a351f;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --bg-translucido: rgba(30, 30, 32, .74);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .4);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, .5);
+  --velo: rgba(0, 0, 0, .5);
 }
 
 [data-estilo="macos"][data-tema="claro"] {
   --bg: #f5f5f7;
-  --bg-surface: #ffffff;
-  --bg-card: #ffffff;
-  --bg-refuerzo: #ececf0;
+  --surface: #ffffff;
+  --surface-2: #f2f2f5;
+  --surface-3: #e8e8ed;
   --text: #1d1d1f;
   --text-muted: #6e6e73;
+  --text-faint: #8e8e93;
   --primary: #007aff;
   --primary-hover: #0062cc;
-  --primary-suave: rgba(0, 122, 255, .10);
-  --border: rgba(0, 0, 0, .09);
-  --border-suave: rgba(0, 0, 0, .055);
+  --primary-soft: #e5f0ff;
+  --primary-text: #007aff;
+  --border: #e2e2e7;
+  --border-strong: #d6d6dc;
   --danger: #ff3b30;
+  --danger-text: #d70015;
   --success: #34c759;
-  --success-suave: rgba(52, 199, 89, .12);
-  --aviso: #ff9500;
-  --vidro: rgba(255, 255, 255, .8);
-  --modal-fondo: rgba(0, 0, 0, .28);
-  --sombra: 0 1px 2px rgba(0, 0, 0, .06), 0 10px 30px rgba(0, 0, 0, .10);
-  --sombra-suave: 0 1px 2px rgba(0, 0, 0, .06);
+  --success-text: #248a3d;
+  --warn: #ff9500;
+  --warn-text: #c93400;
+  --warn-soft: #fff3e0;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --bg-translucido: rgba(255, 255, 255, .78);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, .06);
+  --shadow-md: 0 12px 32px rgba(0, 0, 0, .12);
+  --velo: rgba(0, 0, 0, .28);
 }
 
-[data-estilo="macos"] {
-  --fuente-sistema: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
-  --fuente-display: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
-}
+/* En macOS/iOS esto es SF Pro de verdad; fuera cae en la pila del sistema */
 [data-estilo="macos"] body {
-  font-family: var(--fuente-sistema);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.014em;
 }
-
-/* Titulares con la métrica de Apple: grande y de peso medio */
-[data-estilo="macos"] h1, [data-estilo="macos"] h2, [data-estilo="macos"] h3 { font-family: var(--fuente-display); }
-[data-estilo="macos"] .mes-nav h2 {
-  font-size: 1.375rem; font-weight: 600;
+[data-estilo="macos"] h1,
+[data-estilo="macos"] h2,
+[data-estilo="macos"] h3 {
+  font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI", system-ui, sans-serif;
+  font-weight: 600;
   letter-spacing: -0.022em;
 }
-[data-estilo="macos"] .app-header h1 { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
-[data-estilo="macos"] .card-titulo { font-size: 0.9375rem; font-weight: 600; letter-spacing: -0.015em; }
-[data-estilo="macos"] .modal-titulo { font-size: 1.0625rem; font-weight: 600; letter-spacing: -0.02em; }
-[data-estilo="macos"] .evento-card-titulo { font-weight: 600; letter-spacing: -0.015em; }
-[data-estilo="macos"] .login-card h1 { font-size: 1.5rem; font-weight: 600; letter-spacing: -0.025em; }
+[data-estilo="macos"] .mes-nav h2 { font-size: 1.375rem; }
+[data-estilo="macos"] .app-header h1 { font-size: 1.0625rem; }
+[data-estilo="macos"] .login-card h1 { font-size: 1.5rem; }
 
-/* Trazo más fino: la elegancia de Apple está en el grosor del icono */
+/* Trazo fino: la ligereza de Apple está en el grosor del icono */
 [data-estilo="macos"] svg { stroke-width: 1.6; }
-[data-estilo="macos"] .cierre-check svg,
-[data-estilo="macos"] .evento-check svg { stroke-width: 2.4; }
+[data-estilo="macos"] .evento-check svg,
+[data-estilo="macos"] .btn-mini svg { stroke-width: 2.4; }
 
-/* Radios de sistema: 10px componentes, 12px tarjetas, 16px paneles */
+/* Superficies elevadas con hairline y casi sin sombra */
 [data-estilo="macos"] .ajustes-card,
 [data-estilo="macos"] .evento-card,
-[data-estilo="macos"] .nota-item,
-[data-estilo="macos"] .stat-caja,
-[data-estilo="macos"] .semana-bloque,
-[data-estilo="macos"] .bloque-url,
-[data-estilo="macos"] .resumen-texto,
-[data-estilo="macos"] .descripcion-moodle {
-  border-radius: 12px;
-  border: 1px solid var(--border-suave);
-  box-shadow: var(--sombra-suave);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+[data-estilo="macos"] .stat-box,
+[data-estilo="macos"] .caja-url,
+[data-estilo="macos"] .caja-resumen {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
 }
-[data-estilo="macos"] .ajustes-card { background: var(--bg-card); }
-[data-estilo="macos"] .modal-card { border-radius: 16px; box-shadow: var(--sombra); border-color: var(--border); }
-[data-estilo="macos"] .login-card { border-radius: 16px; box-shadow: var(--sombra); }
-[data-estilo="macos"] .toast { border-radius: 11px; box-shadow: var(--sombra); }
+[data-estilo="macos"] .modal-card { border-radius: 14px; box-shadow: var(--shadow-md); }
+[data-estilo="macos"] .login-card { border-radius: 14px; box-shadow: var(--shadow-md); }
+[data-estilo="macos"] .toast { border-radius: 10px; box-shadow: var(--shadow-md); }
 
-/* Cabecera y barras: solo un hairline, sin bloques de color */
+/* Material translúcido de ventana */
 [data-estilo="macos"] .app-header,
 [data-estilo="macos"] .filtros-bar,
 [data-estilo="macos"] .mes-nav {
-  background: var(--vidro);
-  backdrop-filter: blur(20px) saturate(1.8);
-  -webkit-backdrop-filter: blur(20px) saturate(1.8);
-  border-bottom: 1px solid var(--border-suave);
-}
-[data-estilo="macos"] .user-badge {
-  font-size: 0.6875rem; font-weight: 500;
-  background: var(--bg-refuerzo);
-  color: var(--text-muted);
-  border-radius: 5px;
-  padding: 2px 7px;
+  background: var(--bg-translucido);
+  backdrop-filter: blur(24px) saturate(1.8);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  border-bottom: 1px solid var(--border);
 }
 
-/* SEGMENTED CONTROL — el sello de Apple en las pestañas de vista */
+/* SEGMENTED CONTROL — el sello de Apple */
 [data-estilo="macos"] .view-tabs {
-  gap: 0.125rem;
   display: flex;
+  gap: 2px;
+  width: -moz-fit-content;
   width: fit-content;
   margin: 10px 16px 0;
   padding: 2px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-suave);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   border-radius: 9px;
 }
 [data-estilo="macos"] .view-tab {
-  font-size: 0.8125rem;
   flex: 0 0 auto;
-  padding: 4px 12px;
-  border-radius: 7px;
+  padding: 5px 13px;
   border: none;
+  border-radius: 7px;
   background: transparent;
   color: var(--text-muted);
+  font-size: 0.8125rem;
   font-weight: 500;
 }
 [data-estilo="macos"] .view-tab.active {
-  background: color-mix(in srgb, var(--text) 14%, var(--bg-card));
+  background: var(--surface);
   color: var(--text);
-  box-shadow: var(--sombra-suave);
+  border-bottom-color: transparent;
+  box-shadow: var(--shadow-sm);
 }
-[data-estilo="macos"] .filtros-bar { margin-top: 8px; border-top: none; }
 
-/* Chips pastel con texto oscuro, como las notas adhesivas de la captura */
-[data-estilo="macos"] .chip-modulo,
-[data-estilo="macos"] .cierre-chip,
-[data-estilo="macos"] .dia-evento-mini,
-[data-estilo="macos"] .celda-evento {
-  background: color-mix(in srgb, var(--tinte) 30%, #f2f5fa);
-  color: #14171d;
-  border: 1px solid color-mix(in srgb, var(--tinte) 42%, transparent);
+/* Etiquetas pastel (el tinte ya lo calcula modulos.js) */
+[data-estilo="macos"] .etiqueta {
+  border-radius: 5px;
   font-weight: 600;
-  text-shadow: none;
+  letter-spacing: -0.01em;
+  border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
 }
-[data-estilo="macos"] .dia-evento-mini,
-[data-estilo="macos"] .celda-evento { border-radius: 5px; }
+[data-estilo="macos"] .etiqueta-moodle,
+[data-estilo="macos"] .etiqueta-revisar { border-radius: 5px; font-weight: 600; }
 
+/* Chips de filtro: pastilla neutra, activa con relleno de sistema */
 [data-estilo="macos"] .filtro-chip {
+  border-radius: 7px;
   border: 1px solid var(--border);
   background: transparent;
   color: var(--text-muted);
   font-weight: 500;
-  border-radius: 7px;
 }
-[data-estilo="macos"] .filtro-chip:hover { background: var(--bg-card); color: var(--text); }
+[data-estilo="macos"] .filtro-chip:hover { background: var(--surface-2); color: var(--text); }
 [data-estilo="macos"] .filtro-chip.active {
-  background: color-mix(in srgb, var(--tinte, var(--primary)) 20%, var(--bg-card));
-  color: var(--text);
-  border-color: color-mix(in srgb, var(--tinte, var(--primary)) 45%, transparent);
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
 }
 
-/* Calendario: rejilla casi invisible, hoy como punto de sistema */
-[data-estilo="macos"] .calendario-grid { border-color: var(--border-suave); }
+/* Calendario: rejilla de hairlines y hoy como punto azul */
+[data-estilo="macos"] .calendario-grid,
 [data-estilo="macos"] .dia-celda,
-[data-estilo="macos"] .dia-cabecera { border-color: var(--border-suave); }
-[data-estilo="macos"] .dia-cabecera { background: transparent; font-weight: 500; }
-[data-estilo="macos"] .dia-celda:hover { background: color-mix(in srgb, var(--text) 5%, transparent); }
-[data-estilo="macos"] .dia-numero { color: var(--text-muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+[data-estilo="macos"] .dia-cabecera { border-color: var(--border); }
+[data-estilo="macos"] .dia-celda:hover { background: var(--surface-2); }
+[data-estilo="macos"] .dia-numero { color: var(--text-muted); font-variant-numeric: tabular-nums; }
 [data-estilo="macos"] .dia-celda.hoy .dia-numero {
   background: var(--primary);
   color: #fff;
   font-weight: 600;
 }
+[data-estilo="macos"] .dia-evento-mini { border-radius: 4px; font-weight: 500; }
 
-/* Botones del sistema */
+/* Semana */
+[data-estilo="macos"] .semana-dia { border-color: var(--border); }
+[data-estilo="macos"] .semana-dia.hoy { background: var(--primary-soft); }
+[data-estilo="macos"] .semana-evento { border-radius: 6px; font-weight: 500; }
+[data-estilo="macos"] .semana-num,
+[data-estilo="macos"] .semana-evento-hora { font-variant-numeric: tabular-nums; }
+
+/* Botones de sistema */
 [data-estilo="macos"] .btn,
 [data-estilo="macos"] .btn-icon,
-[data-estilo="macos"] .mes-nav button,
-[data-estilo="macos"] .opcion-tema {
+[data-estilo="macos"] .btn-mini,
+[data-estilo="macos"] .mes-nav button {
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
   color: var(--text);
   font-weight: 500;
-  box-shadow: none;
 }
 [data-estilo="macos"] .btn:hover,
 [data-estilo="macos"] .btn-icon:hover,
-[data-estilo="macos"] .mes-nav button:hover { background: var(--bg-refuerzo); }
+[data-estilo="macos"] .mes-nav button:hover { background: var(--surface-2); }
 [data-estilo="macos"] .btn-filled,
-[data-estilo="macos"] .btn-moodle,
-[data-estilo="macos"] .login-card .btn-primary,
-[data-estilo="macos"] .opcion-tema.activo {
+[data-estilo="macos"] .btn-primary {
   background: var(--primary);
-  border-color: transparent;
+  border-color: var(--primary);
   color: #fff;
   font-weight: 600;
 }
 [data-estilo="macos"] .btn-filled:hover,
-[data-estilo="macos"] .btn-moodle:hover { background: var(--primary-hover); }
-[data-estilo="macos"] .btn-danger { background: transparent; border-color: color-mix(in srgb, var(--danger) 45%, transparent); color: var(--danger); }
-[data-estilo="macos"] .btn-danger:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); filter: none; }
+[data-estilo="macos"] .btn-primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
+[data-estilo="macos"] .btn-danger {
+  background: transparent;
+  border-color: color-mix(in srgb, var(--danger) 45%, var(--border-strong));
+  color: var(--danger-text);
+}
+[data-estilo="macos"] .btn-danger:hover { background: color-mix(in srgb, var(--danger) 14%, transparent); }
+[data-estilo="macos"] .btn-texto { color: var(--primary-text); }
 
 [data-estilo="macos"] .fab {
   border-radius: 999px;
   background: var(--primary);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .3), 0 0 0 1px color-mix(in srgb, #fff 12%, transparent) inset;
+  color: #fff;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--primary) 45%, transparent);
 }
-[data-estilo="macos"] .fab:hover { background: var(--primary-hover); transform: none; }
+[data-estilo="macos"] .fab:hover { background: var(--primary-hover); }
 
-/* Inputs: fondo hundido suave, foco de sistema */
+/* Campos hundidos con foco de sistema */
 [data-estilo="macos"] .modal-body input,
 [data-estilo="macos"] .modal-body textarea,
 [data-estilo="macos"] .modal-body select,
-[data-estilo="macos"] .nota-input,
 [data-estilo="macos"] .login-card input {
   border-radius: 8px;
-  border: 1px solid var(--border);
-  background: color-mix(in srgb, var(--bg) 65%, var(--bg-surface));
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
 }
 [data-estilo="macos"] .modal-body input:focus,
 [data-estilo="macos"] .modal-body textarea:focus,
 [data-estilo="macos"] .modal-body select:focus,
-[data-estilo="macos"] .nota-input:focus,
 [data-estilo="macos"] .login-card input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--primary) 26%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary) 22%, transparent);
   outline: none;
 }
 [data-estilo="macos"] .modal-body label,
 [data-estilo="macos"] .login-card label {
-  font-weight: 500;
   text-transform: none;
-  letter-spacing: 0;
+  letter-spacing: -0.01em;
   font-size: 0.75rem;
+  font-weight: 500;
 }
 
-/* Listas y detalles */
-[data-estilo="macos"] .evento-card { background: var(--bg-card); }
-[data-estilo="macos"] .evento-card:hover { background: var(--bg-refuerzo); border-color: var(--border-suave); }
-[data-estilo="macos"] .evento-card-color { width: 3px; border-radius: 2px; opacity: .85; }
-[data-estilo="macos"] .evento-check { border-radius: 5px; }
-[data-estilo="macos"] .grupo-hoy { color: var(--primary); }
-[data-estilo="macos"] .evento-card-origen-moodle {
-  background: var(--primary-suave);
-  color: var(--primary);
-  border-radius: 5px;
-  font-weight: 600;
-}
-[data-estilo="macos"] .chip-revisar {
-  background: color-mix(in srgb, var(--aviso) 18%, transparent);
-  color: var(--aviso);
-  border-radius: 5px;
-}
-[data-estilo="macos"] .linea-titulo, [data-estilo="macos"] .cierre-titulo { letter-spacing: -0.01em; }
+/* Avisos: banda tintada sin bordes duros */
+[data-estilo="macos"] .aviso-banda { border-left: none; }
+[data-estilo="macos"] .aviso-horas { font-variant-numeric: tabular-nums; font-weight: 600; }
+[data-estilo="macos"] .enlace-evento { color: var(--primary-text); }
 
-/* Banners: tintados suaves, sin bordes duros */
-[data-estilo="macos"] .banner { border-left: none; padding: 0.6rem 1rem; }
-[data-estilo="macos"] .banner-cierre.critico { background: color-mix(in srgb, var(--danger) 16%, var(--bg-surface)); }
-[data-estilo="macos"] .banner-cierre.urgente { background: color-mix(in srgb, var(--aviso) 16%, var(--bg-surface)); }
-[data-estilo="macos"] .banner-cierre.proximo { background: color-mix(in srgb, var(--primary) 12%, var(--bg-surface)); }
-[data-estilo="macos"] .banner-cierre.critico .banner-icono { color: var(--danger); }
-[data-estilo="macos"] .banner-cierre.urgente .banner-icono { color: var(--aviso); }
-[data-estilo="macos"] .banner-alerta { background: color-mix(in srgb, var(--danger) 14%, var(--bg-surface)); }
-
-/* Estadísticas y plan: cifras grandes y discretas */
-[data-estilo="macos"] .stat-caja {
-  background: var(--bg-card);
-  border-top: 1px solid var(--border-suave);
-}
+/* Estadísticas: cifras grandes de peso medio, como Apple */
 [data-estilo="macos"] .stat-valor {
-  font-size: 1.75rem; font-weight: 600;
-  color: var(--text);
+  font-size: 1.75rem;
+  font-weight: 600;
   letter-spacing: -0.03em;
+  color: var(--text);
   font-variant-numeric: tabular-nums;
 }
-[data-estilo="macos"] .semana-bloque { background: var(--bg-card); border-left-width: 3px; }
-[data-estilo="macos"] .barra-carga { background: var(--bg-refuerzo); }
-[data-estilo="macos"] .pulso.alta, [data-estilo="macos"] .barra-relleno.alta { background: var(--danger); }
-[data-estilo="macos"] .pulso.media, [data-estilo="macos"] .barra-relleno.media { background: var(--aviso); }
-[data-estilo="macos"] .pulso.baja, [data-estilo="macos"] .barra-relleno.baja { background: var(--success); }
-[data-estilo="macos"] .semana-titulo { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+[data-estilo="macos"] .stat-label { font-weight: 500; }
+[data-estilo="macos"] .barra-fondo { background: var(--surface-3); }
+[data-estilo="macos"] .plan-fecha,
+[data-estilo="macos"] .ajustes-item-valor { font-variant-numeric: tabular-nums; }
+[data-estilo="macos"] .punto-estado { border-radius: 999px; }
 
-/* Selector de estilo/tema como rejilla de opciones del sistema */
-[data-estilo="macos"] .opcion-tema {
-  border-radius: 9px;
-  background: color-mix(in srgb, var(--bg) 65%, var(--bg-surface));
-}
-[data-estilo="macos"] .opcion-tema.activo {
-  background: var(--primary);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 1px 6px color-mix(in srgb, var(--primary) 45%, transparent);
-}
-[data-estilo="macos"] .notas-card { border-left: 3px solid var(--tinte); }
+/* Ajustes como Preferencias: separadores de 1px */
+[data-estilo="macos"] .ajustes-item { border-bottom-color: var(--border); }
+[data-estilo="macos"] .ajustes-item-label { font-weight: 400; }
 
 /* ------------------------------------------------------------
    2) VISION GLASS — vidrio fuerte + aurora de fondo
@@ -804,3 +771,44 @@
 }
 
 [data-estilo="hud"] .login-card h1 { color: var(--primary); text-shadow: 0 0 18px color-mix(in srgb, var(--primary) 45%, transparent); }
+
+/* ============================================================
+   ADAPTACI�N AL SISTEMA DE TOKENS DEL REDISE�O
+   Los estilos de arriba definen los nombres antiguos; aqu� se
+   conectan con los tokens que usa la interfaz actual.
+   ============================================================ */
+[data-estilo="glass"],
+[data-estilo="neobrutalo"],
+[data-estilo="hud"] {
+  --surface: var(--bg-card);
+  --surface-2: var(--bg-refuerzo);
+  --surface-3: var(--bg-refuerzo);
+  --border-strong: var(--border);
+  --primary-soft: var(--primary-suave);
+  --primary-text: var(--primary);
+  --danger-text: var(--danger);
+  --success-text: var(--success);
+  --warn-text: var(--aviso);
+  --warn-soft: color-mix(in srgb, var(--aviso) 16%, transparent);
+  --text-faint: var(--text-muted);
+  --bg-translucido: var(--vidro);
+  --velo: var(--modal-fondo);
+  --shadow: var(--sombra);
+  --shadow-sm: var(--sombra-suave, var(--sombra));
+}
+
+/* Neobrutalismo oscuro: el acento es claro, as� que el texto va en tinta. */
+[data-estilo="neobrutalo"][data-tema="oscuro"] .btn-primary,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .btn-filled,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .filtro-chip.active,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .fab,
+[data-estilo="neobrutalo"][data-tema="oscuro"] .dia-celda.hoy .dia-numero {
+  color: #17130f;
+}
+
+/* HUD: el cian es muy claro para texto blanco encima. */
+[data-estilo="hud"] .btn-primary,
+[data-estilo="hud"] .btn-filled,
+[data-estilo="hud"] .filtro-chip.active {
+  color: #04121a;
+}

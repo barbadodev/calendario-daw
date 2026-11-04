@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { TriangleAlert } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL;
 
-/** Aviso si Moodle lleva más de ~26 h sin sincronizar o hay error activo. */
+/** Aviso si Moodle lleva más de ~26h sin sincronizar o hay error activo. */
 export default function BannerMoodle({ sala }) {
   const [estado, setEstado] = useState(null);
 
@@ -13,7 +12,7 @@ export default function BannerMoodle({ sala }) {
       try {
         const res = await fetch(`${API}/api/moodle-status?sala=${sala}`);
         if (res.ok && vivo) setEstado(await res.json());
-      } catch { /* backend dormido, no molestar */ }
+      } catch { /* silencioso */ }
     }
     check();
     const id = setInterval(check, 5 * 60 * 1000);
@@ -29,10 +28,12 @@ export default function BannerMoodle({ sala }) {
       : 'La sincronización con Moodle aún no se ha ejecutado';
 
   return (
-    <div className="banner banner-alerta" role="alert">
-      <TriangleAlert size={16} />
-      <div className="banner-texto">
-        <strong>Aviso: </strong>{msg}
+    <div className="aviso-banda" style={{ '--tono': '#a4443c' }}>
+      <div className="aviso-cabecera">
+        <span className="punto-estado" style={{ background: '#a4443c' }} aria-hidden="true" />
+        <span style={{ flex: 1 }}>
+          <strong>Aviso: </strong>{msg}
+        </span>
       </div>
     </div>
   );
