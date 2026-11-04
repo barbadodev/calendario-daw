@@ -66,10 +66,24 @@ export default function Ajustes({ usuario, eventos }) {
         }
       }
 
+      const plataforma = detectarPlataforma();
+      const sugerida = `${plataforma} de ${usuario.nombre}`;
+      const etiqueta = (window.prompt(
+        'Ponle nombre a este dispositivo para poder identificarlo\n' +
+        '(ej: "iPhone de Antonio Barbado")',
+        sugerida
+      ) ?? sugerida).trim() || sugerida;
+
       const res = await fetch(`${API_URL}/api/push/suscribir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id, suscripcion: sub.toJSON() }),
+        body: JSON.stringify({
+          sala: usuario.codigo_sala,
+          usuarioId: usuario.id,
+          suscripcion: sub.toJSON(),
+          etiqueta,
+          plataforma,
+        }),
       });
       if (res.ok) {
         setNotifActiva(true);
@@ -100,15 +114,64 @@ export default function Ajustes({ usuario, eventos }) {
   }
 
   async function verSuscripciones() {
-    setMostrarSubs(!mostrarSubs);
-    if (mostrarSubs) return;
+    const nuevoEstado = !mostrarSubs;
+    setMostrarSubs(nuevoEstado);
+    if (!nuevoEstado) return;
+
+    // Para saber cuál de la lista es ESTE dispositivo
+    let miPista = null;
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      const actual = await reg?.pushManager?.getSubscription();
+      if (actual) miPista = actual.endpoint.slice(0, 70);
+    } catch { /* sin soporte */ }
+
     try {
       const res = await fetch(`${API_URL}/api/push/suscripciones?sala=${usuario.codigo_sala}`);
       const data = await res.json();
-      setSubs(data.suscripciones || []);
+      setSubs((data.suscripciones || []).map(s => ({ ...s, es_mio: !!(miPista && s.pista === miPista) })));
     } catch (err) {
       setSubs([]);
     }
+  }
+
+  async function renombrarDispositivo(s) {
+    const nueva = window.prompt('Nombre para este dispositivo:', s.etiqueta || s.nombre_sugerido);
+    if (nueva === null) return;
+    const res = await fetch(`${API_URL}/api/push/suscripcion/${s.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sala: usuario.codigo_sala, etiqueta: nueva }),
+    });
+    if (res.ok) {
+      setMensaje(`✏️ Renombrado a "${nueva.trim() || s.nombre_sugerido}"`);
+      const r2 = await fetch(`${API_URL}/api/push/suscripciones?sala=${usuario.codigo_sala}`);
+      const d2 = await r2.json();
+      setSubs(d2.suscripciones || []);
+    } else setMensaje('❌ No se pudo renombrar');
+  }
+
+  async function revocarDispositivo(s) {
+    const texto = s.es_mio
+      ? `Vas a QUITAR este dispositivo (${s.etiqueta || s.nombre_sugerido}).\n\nDejarás de recibir notificaciones hasta que vuelvas a activarlas.`
+      : `Vas a QUITAR el dispositivo "${s.etiqueta || s.nombre_sugerido}" de ${s.dueno}.\n\nEse móvil dejará de recibir notificaciones aunque tenga la app abierta.`;
+    if (!confirm(texto)) return;
+
+    const res = await fetch(`${API_URL}/api/push/suscripcion/${s.id}?sala=${encodeURIComponent(usuario.codigo_sala)}`, {
+      method: 'DELETE',
+    });
+    if (!res.ok) { setMensaje('❌ No se pudo quitar'); return; }
+
+    if (s.es_mio) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        const actual = await reg?.pushManager?.getSubscription();
+        if (actual) await actual.unsubscribe();
+        setNotifActiva(false);
+      } catch { /* nada */ }
+    }
+    setMensaje(`🗑️ Quitado: ${s.etiqueta || s.nombre_sugerido}`);
+    setSubs(prev => prev.filter(x => x.id !== s.id));
   }
 
   async function resetearSubs() {
@@ -214,11 +277,42 @@ export default function Ajustes({ usuario, eventos }) {
             <button className="btn btn-danger" onClick={resetearSubs}>Resetear</button>
           </div>
         </div>
-        {mostrarSubs && subs.length > 0 && (
-          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: 8, background: 'var(--bg)', padding: '0.5rem', borderRadius: 6 }}>
-            {subs.map(s => (
-              <div key={s.id} style={{ marginBottom: 4 }}>
-                <strong>{s.proveedor}</strong> · desde {new Date(s.creacion).toLocaleDateString('es-ES')}
+        {mostrarSubs && (
+          <div style={{ marginTop: 10 }}>
+            {subs.length === 0 ? (
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Ningún dispositivo suscrito.</p>
+            ) : subs.map(s => (
+              <div key={s.id} style={{
+                display: 'flex', alignItems: 'center', gap: '0.5rem',
+                padding: '0.5rem 0', borderBottom: '1px solid var(--border)', fontSize: '0.8125rem',
+              }}>
+                <span style={{ fontSize: '1rem', flexShrink: 0 }}>
+                  {s.proveedor === 'iOS' ? '📱' : s.proveedor === 'Android' ? '🤖' : '💻'}
+                </span>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {s.etiqueta || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>sin nombre</span>}
+                  </div>
+                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
+                    de <strong>{s.dueno}</strong>
+                    {s.es_mio && <span style={{ color: 'var(--primary)', fontWeight: 600 }}> · 👉 este</span>}
+                    {s.es_solo_dispositivo && ' · ⚠️ este miembro tiene varios dispositivos'}
+                    {' · '}activado {new Date(s.activado).toLocaleDateString('es-ES')}
+                    {s.ultima_vez ? ` · usado ${new Date(s.ultima_vez).toLocaleDateString('es-ES')}` : ''}
+                  </div>
+                </div>
+
+                <button className="btn" title="Renombrar"
+                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', flexShrink: 0 }}
+                  onClick={() => renombrarDispositivo(s)}>
+                  ✏️
+                </button>
+                <button className="btn btn-danger" title="Quitar este dispositivo"
+                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', flexShrink: 0 }}
+                  onClick={() => revocarDispositivo(s)}>
+                  ✕
+                </button>
               </div>
             ))}
           </div>
@@ -310,9 +404,22 @@ export default function Ajustes({ usuario, eventos }) {
         </div>
         <div className="ajustes-item">
           <span className="ajustes-item-label">Versión</span>
-          <span className="ajustes-item-valor">1.2.0</span>
+          <span className="ajustes-item-valor">1.3.0</span>
         </div>
       </div>
     </div>
   );
+}
+
+/** Nombre aproximado del dispositivo, deducido del navegador. */
+function detectarPlataforma() {
+  const ua = navigator.userAgent || '';
+  if (/iPhone/i.test(ua)) return 'iPhone';
+  if (/iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
+  if (/iPod/i.test(ua)) return 'iPod';
+  if (/Android/i.test(ua)) return 'Android';
+  if (/Windows NT/i.test(ua)) return 'PC Windows';
+  if (/Mac OS X/i.test(ua)) return 'Mac';
+  if (/Linux/i.test(ua)) return 'Linux';
+  return 'Dispositivo';
 }

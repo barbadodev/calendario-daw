@@ -17,7 +17,7 @@ router.get('/vapid-public-key', (req, res) => {
 
 router.post('/suscribir', async (req, res) => {
   try {
-    const { sala, usuarioId, suscripcion } = req.body;
+    const { sala, usuarioId, suscripcion, etiqueta, plataforma } = req.body;
     if (sala !== process.env.SALA_CODIGO) {
       return res.status(401).json({ error: 'No autorizado' });
     }
@@ -25,7 +25,14 @@ router.post('/suscribir', async (req, res) => {
     const { data, error } = await supabaseAdmin
       .from('suscripciones_push')
       .upsert(
-        { usuario_id: usuarioId, endpoint: suscripcion.endpoint, datos: suscripcion },
+        {
+          usuario_id: usuarioId,
+          endpoint: suscripcion.endpoint,
+          datos: suscripcion,
+          etiqueta: etiqueta || null,
+          plataforma: plataforma || null,
+          ultima_vez: new Date().toISOString(),
+        },
         { onConflict: 'endpoint' }
       )
       .select()
@@ -35,6 +42,41 @@ router.post('/suscribir', async (req, res) => {
     res.json({ ok: true, suscripcion: data });
   } catch (err) {
     console.error('Error en POST /push/suscribir:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// PUT /api/push/suscripcion/:id — renombrar un dispositivo
+router.put('/suscripcion/:id', async (req, res) => {
+  try {
+    const { sala, etiqueta } = req.body;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    const { data, error } = await supabaseAdmin
+      .from('suscripciones_push')
+      .update({ etiqueta: (etiqueta || '').trim() || null })
+      .eq('id', req.params.id)
+      .select().single();
+    if (error) throw error;
+    res.json({ ok: true, suscripcion: data });
+  } catch (err) {
+    console.error('Error renombrando dispositivo:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// DELETE /api/push/suscripcion/:id — revocar un dispositivo concreto
+router.delete('/suscripcion/:id', async (req, res) => {
+  try {
+    const sala = req.query.sala || (req.body && req.body.sala);
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+
+    const { data: borrado } = await supabaseAdmin
+      .from('suscripciones_push').delete().eq('id', req.params.id).select('id, etiqueta, usuario_id');
+
+    if (!borrado || borrado.length === 0) return res.status(404).json({ error: 'Ese dispositivo ya no estaba' });
+    res.json({ ok: true, borrado: borrado[0] });
+  } catch (err) {
+    console.error('Error revocando dispositivo:', err);
     res.status(500).json({ error: 'Error interno' });
   }
 });
@@ -109,21 +151,48 @@ router.get('/suscripciones-count', async (req, res) => {
   }
 });
 
-// GET /api/push/suscripciones?sala=xxx — lista con el proveedor (Apple/Google) de cada sub
+// GET /api/push/suscripciones?sala=xxx — dispositivos con su nombre, dueño y tipo
 router.get('/suscripciones', async (req, res) => {
   try {
     const { sala } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
-    const { data } = await supabaseAdmin
-      .from('suscripciones_push').select('id, usuario_id, endpoint, created_at');
-    const conProvider = (data || []).map(s => {
-      let proveedor = 'desconocido';
-      if (s.endpoint.includes('apple.com')) proveedor = 'iOS/Apple';
-      else if (s.endpoint.includes('googleapis.com') || s.endpoint.includes('firebase')) proveedor = 'Android/Google FCM';
+
+    const [{ data: subs }, { data: users }] = await Promise.all([
+      supabaseAdmin.from('suscripciones_push')
+        .select('id, usuario_id, endpoint, created_at, etiqueta, plataforma, ultima_vez')
+        .order('created_at', { ascending: true }),
+      supabaseAdmin.from('usuarios').select('id, nombre'),
+    ]);
+
+    const nombres = Object.fromEntries((users || []).map(u => [u.id, u.nombre]));
+    const dueenos = {};
+    for (const u of users || []) {
+      const n = (nombres[u.id] || '').toLowerCase();
+      dueenos[u.id] = (subs || []).filter(s => s.usuario_id === u.id).length;
+    }
+
+    const lista = (subs || []).map(s => {
+      let proveedor = 'otro';
+      if (s.endpoint.includes('apple.com')) proveedor = 'iOS';
+      else if (s.endpoint.includes('googleapis.com') || s.endpoint.includes('firebase')) proveedor = 'Android';
       else if (s.endpoint.includes('mozilla')) proveedor = 'Firefox';
-      return { id: s.id, usuario_id: s.usuario_id, proveedor, creacion: s.created_at, url: s.endpoint.slice(0, 60) };
+
+      return {
+        id: s.id,
+        usuario_id: s.usuario_id,
+        dueno: nombres[s.usuario_id] || 'usuario eliminado',
+        etiqueta: s.etiqueta || null,
+        nombre_sugerido: s.etiqueta || `${s.plataforma || proveedor} de ${nombres[s.usuario_id] || '?'}`,
+        plataforma: s.plataforma || null,
+        proveedor,
+        pista: s.endpoint.slice(0, 70),
+        activado: s.created_at,
+        ultima_vez: s.ultima_vez,
+        es_solo_dispositivo: dueenos[s.usuario_id] > 1,
+      };
     });
-    res.json({ suscripciones: conProvider });
+
+    res.json({ suscripciones: lista, total: lista.length });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
