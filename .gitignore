@@ -32,3 +32,6 @@ Thumbs.db
 # Temp
 *.tmp
 vapid-keys.txt
+
+# respaldos locales de trabajo en curso
+patches/
