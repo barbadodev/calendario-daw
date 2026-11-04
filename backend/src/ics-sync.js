@@ -226,5 +226,8 @@ export function iniciarSincronizacionMoodle() {
   import('./push.js').then(m => {
     setInterval(() => m.enviarNotificacionesRecordatorio(), 5 * 60 * 1000);
     setTimeout(() => m.enviarNotificacionesRecordatorio(), 60_000);
+    // Cierres inminentes: revisa cada 10 min (el primero poco después de arrancar)
+    setInterval(() => m.revisarCierresProximos(), 10 * 60 * 1000);
+    setTimeout(() => m.revisarCierresProximos(), 25_000);
   });
 }

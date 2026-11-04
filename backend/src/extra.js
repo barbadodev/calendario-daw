@@ -2,6 +2,7 @@ import './load-env.js';
 import { Router } from 'express';
 import { supabaseAdmin } from './db.js';
 import { sincronizarFeed } from './ics-sync.js';
+import { revisarCierresProximos } from './push.js';
 
 export const routerEventosExtra = Router();
 
@@ -92,6 +93,57 @@ routerGlobal.post('/sync/now', async (req, res) => {
 
 // GET /api/keepalive
 routerGlobal.get('/keepalive', (req, res) => res.json({ ok: true }));
+
+// GET /api/cierres-proximos — entregas pendientes con plazo que vence pronto
+// Devuelve también las de 48 h para que la app pueda colorear por urgencia.
+routerGlobal.get('/cierres-proximos', async (req, res) => {
+  try {
+    const { sala } = req.query;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+
+    const ahora = Date.now();
+    const { data } = await supabaseAdmin
+      .from('eventos')
+      .select('id, titulo, modulo_id, fecha_fin, fecha_inicio, alerta_cierre, moodle_url, enlace, origen')
+      .eq('tipo_id', 'entrega')
+      .eq('completado', false);
+
+    const cierres = (data || []).map(ev => {
+      const deadline = new Date(ev.fecha_fin || ev.fecha_inicio).getTime();
+      return { ...ev, deadline, horas: (deadline - ahora) / 3600000 };
+    })
+      .filter(e => !Number.isNaN(e.deadline) && e.horas > 0 && e.horas <= 48)
+      .sort((a, b) => a.horas - b.horas)
+      .map(e => ({
+        id: e.id,
+        titulo: e.titulo,
+        modulo_id: e.modulo_id,
+        horas: Math.round(e.horas * 10) / 10,
+        nivel: e.horas <= 3 ? 'critico' : e.horas <= 12 ? 'urgente' : 'proximo',
+        deadline: new Date(e.deadline).toISOString(),
+        enlace: e.moodle_url || e.enlace,
+        origen: e.origen,
+      }));
+
+    res.json({ cierres, total: cierres.length });
+  } catch (err) {
+    console.error('Error cierres-proximos:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
+// POST /api/cierres/revisar — fuerza la revisión de avisos ahora
+routerGlobal.post('/cierres/revisar', async (req, res) => {
+  try {
+    const { sala } = req.body;
+    if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+    await revisarCierresProximos();
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error revisar cierres:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
 
 // GET /api/moodle-status — salud de la sincronización con Moodle
 routerGlobal.get('/moodle-status', async (req, res) => {

@@ -219,6 +219,82 @@ async function notificarUsuario(usuarioId, titulo, cuerpo, url) {
   }
 }
 
+/**
+ * Alerta de cierre inminente.
+ * Revisa entregas pendientes cuyo plazo de cierre cae en menos de 24 h
+ * y avisa una sola vez por nivel (24h → 12h → 3h), para no spamear.
+ */
+const NIVEL_URGENCIA = { '24h': 1, '12h': 2, '3h': 3 };
+
+export async function revisarCierresProximos() {
+  try {
+    const ahora = Date.now();
+    const en24h = ahora + 24 * 3600 * 1000;
+
+    const { data: entregas } = await supabaseAdmin
+      .from('eventos')
+      .select('id, titulo, modulo_id, fecha_fin, fecha_inicio, alerta_cierre, enlace, moodle_url')
+      .eq('tipo_id', 'entrega')
+      .eq('completado', false);
+
+    if (!entregas || entregas.length === 0) return;
+
+    for (const ev of entregas) {
+      // El cierre real es fecha_fin; si no viene, se usa la propia fecha
+      const deadline = new Date(ev.fecha_fin || ev.fecha_inicio).getTime();
+      if (Number.isNaN(deadline)) continue;
+      if (deadline <= ahora || deadline > en24h) continue;
+
+      const horasRestantes = (deadline - ahora) / 3600000;
+      const nivel = horasRestantes <= 3 ? '3h' : horasRestantes <= 12 ? '12h' : '24h';
+
+      // Solo se avisa si se sube de urgencia (no repetir el mismo nivel)
+      const previo = NIVEL_URGENCIA[ev.alerta_cierre] || 0;
+      if (NIVEL_URGENCIA[nivel] <= previo) continue;
+
+      const mod = String(ev.modulo_id || 'otro').toUpperCase();
+      const queda = nivel === '24h'
+        ? `cierra en ${Math.round(horasRestantes)} h`
+        : nivel === '12h'
+          ? `⚠️ cierra en ${Math.round(horasRestantes)} h`
+          : `🚨 cierra en ${Math.max(1, Math.round(horasRestantes))} h`;
+
+      const { enviadas } = await notificarTodos({
+        titulo: `⏰ ${mod}: ${queda}`,
+        cuerpo: `${ev.titulo} — ¿ya lo subiste a Moodle?`,
+        url: ev.moodle_url || ev.enlace || 'https://calendario-daw-1.onrender.com',
+      });
+
+      if (enviadas > 0) {
+        await supabaseAdmin.from('eventos').update({ alerta_cierre: nivel }).eq('id', ev.id);
+        console.log(`⏰ Alerta de cierre [${nivel}] → ${ev.titulo} (${enviadas} disp.)`);
+      }
+    }
+  } catch (err) {
+    console.error('Error revisando cierres:', err.message);
+  }
+}
+
+// Envía a TODO el grupo (a diferencia de notificarCambio, que excluye al autor)
+async function notificarTodos({ titulo, cuerpo, url }) {
+  const { data: subs } = await supabaseAdmin.from('suscripciones_push').select('id, datos');
+  if (!subs || subs.length === 0) return { enviadas: 0 };
+
+  const payload = JSON.stringify({ titulo, cuerpo, url });
+  let enviadas = 0;
+  for (const s of subs) {
+    try {
+      await webpush.sendNotification(s.datos, payload);
+      enviadas++;
+    } catch (err) {
+      if (err.statusCode === 410) {
+        await supabaseAdmin.from('suscripciones_push').delete().eq('id', s.id);
+      }
+    }
+  }
+  return { enviadas };
+}
+
 export async function enviarNotificacionesRecordatorio() {
   try {
     const ahora = new Date();

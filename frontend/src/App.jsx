@@ -10,6 +10,7 @@ import NotasModulo from './NotasModulo.jsx';
 import PlanEstudio from './PlanEstudio.jsx';
 import ContadorProximo from './ContadorProximo.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
+import AlertaCierres from './AlertaCierres.jsx';
 import { supabase } from './supabase.js';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -140,6 +141,23 @@ export default function App() {
     });
   }
 
+  async function marcarEntregado(id) {
+    const ev = eventos.find(e => e.id === id);
+    if (!ev || ev.completado) return;
+    await toggleCompletar(id, ev.completado);
+    mostrarAviso(`✅ ${ev.titulo.slice(0, 40)} · marcada como entregada`);
+    // Avisa al grupo de que ya la has subido
+    fetch(`${API_URL}/api/eventos/${id}/notas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sala: usuario.codigo_sala,
+        contenido: 'Entregada ✅',
+        autor_id: usuario.id,
+      }),
+    });
+  }
+
   async function duplicarEvento(id) {
     const res = await fetch(`${API_URL}/api/eventos/${id}/duplicar`, {
       method: 'POST',
@@ -173,6 +191,7 @@ export default function App() {
       </header>
 
       <ContadorProximo eventos={eventos} />
+      <AlertaCierres sala={usuario.codigo_sala} onMarcarEntregado={marcarEntregado} />
       <BannerMoodle sala={usuario.codigo_sala} />
 
       <nav className="view-tabs">
