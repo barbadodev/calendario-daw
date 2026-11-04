@@ -73,6 +73,28 @@ git worktree prune                # limpiar registros huérfanos
 
 > Los 3 puntos que se olvidan siempre: **no hay `.env`** (hay que copiarlos), **no hay `node_modules`** (`npm install`) y **Render solo despliega `main`** (tu rama no se ve en la web hasta mergear; para verla usa `npm run dev`).
 
+### Tu segundo entorno (ya creado)
+
+```
+C:\Users\barba\calendario-daw     rama main              <- sesión principal
+C:\Users\barba\calendario-daw-2   rama antonio/paralelo-1 <- segunda sesión
+```
+
+Allí dentro, para probar sin esperar a Render:
+
+```powershell
+cd ~\calendario-daw-2\backend  ; node server.js   # API -> http://localhost:3001
+cd ~\calendario-daw-2\frontend ; npm run dev      # web -> http://localhost:5173
+```
+
+> El `frontend/.env` que se copó suele apuntar a la API desplegada en Render, así que
+> `npm run dev` funciona sin levantar el backend local. Levántalo solo si vas a probar
+> cambios de backend (y entonces pon `VITE_API_URL` en `http://localhost:3001` en ese `.env`).
+
+Cuando esa rama esté buena, se mergea a `main` y Render la despliega sola.
+Para abrir otra idea en paralelo, una rama nueva dentro del mismo worktree:
+`git switch -c antonio/la-otra-idea`
+
 ---
 
 ## 3. Repartirse el trabajo para no tener conflictos
