@@ -3,7 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MODULOS, TIPOS } from './modulos.js';
 import { useBloquearScroll } from './useEsMovil.js';
-import { X, GraduationCap, MessageSquare, Plus, Copy, Trash2 } from 'lucide-react';
+import { IconoCerrar, IconoEnlace } from './Icons.jsx';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -38,11 +38,9 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   }, [evento, fechaInicial]);
 
   async function cargarNotas(id) {
-    try {
-      const res = await fetch(`${API_URL}/api/eventos/${id}/notas?sala=${usuario.codigo_sala}`);
-      const { notas } = await res.json();
-      setNotas(notas || []);
-    } catch { setNotas([]); }
+    const res = await fetch(`${API_URL}/api/eventos/${id}/notas?sala=${usuario.codigo_sala}`);
+    const { notas } = await res.json();
+    setNotas(notas || []);
   }
 
   async function guardarNota(e) {
@@ -90,38 +88,39 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
     <div className="modal-overlay" onClick={onCerrar}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2 className="modal-titulo">
+          <h2>
             {esEdicion ? 'Editar evento' : 'Nuevo evento'}
-            {esOrigenMoodle && <span className="modal-subtitulo">sincronizado con Moodle</span>}
+            {esOrigenMoodle && <span className="modal-sub">Sincronizado con Moodle</span>}
           </h2>
-          <button className="btn-icon" onClick={onCerrar} aria-label="Cerrar"><X size={16} /></button>
+          <button className="btn-icon" onClick={onCerrar} aria-label="Cerrar">
+            <IconoCerrar size={18} />
+          </button>
         </div>
-
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
-            <label>Título</label>
-            <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)}
+            <label htmlFor="ev-titulo">Título</label>
+            <input id="ev-titulo" type="text" value={titulo} onChange={e => setTitulo(e.target.value)}
               placeholder="Ej: Examen final DWES" required disabled={esOrigenMoodle} />
 
-            <label>Módulo</label>
-            <select value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={esOrigenMoodle}>
+            <label htmlFor="ev-modulo">Módulo</label>
+            <select id="ev-modulo" value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={esOrigenMoodle}>
               {MODULOS.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </select>
 
-            <label>Tipo</label>
-            <select value={tipoId} onChange={e => setTipoId(e.target.value)} disabled={esOrigenMoodle}>
+            <label htmlFor="ev-tipo">Tipo</label>
+            <select id="ev-tipo" value={tipoId} onChange={e => setTipoId(e.target.value)} disabled={esOrigenMoodle}>
               {TIPOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
             </select>
 
             <div className="campo-fecha-hora">
               <div>
-                <label>Fecha</label>
-                <input type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required disabled={esOrigenMoodle} />
+                <label htmlFor="ev-fecha">Fecha</label>
+                <input id="ev-fecha" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required disabled={esOrigenMoodle} />
               </div>
               {!todoElDia && (
                 <div>
-                  <label>Hora</label>
-                  <input type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} disabled={esOrigenMoodle} />
+                  <label htmlFor="ev-hora">Hora</label>
+                  <input id="ev-hora" type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} disabled={esOrigenMoodle} />
                 </div>
               )}
             </div>
@@ -131,30 +130,30 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
               Todo el día
             </label>
 
-            <label>Enlace asociado (opcional)</label>
-            <input type="url" value={enlace} onChange={e => setEnlace(e.target.value)}
+            <label htmlFor="ev-enlace">Enlace asociado (opcional)</label>
+            <input id="ev-enlace" type="url" value={enlace} onChange={e => setEnlace(e.target.value)}
               placeholder="https://moodle.../practica3" />
 
             {esOrigenMoodle && evento.moodle_url && (
-              <a href={evento.moodle_url} target="_blank" rel="noreferrer" className="btn-moodle">
-                <GraduationCap size={15} /> Abrir el curso en Moodle
-              </a>
+              <div style={{ marginTop: '0.85rem' }}>
+                <a href={evento.moodle_url} target="_blank" rel="noreferrer"
+                  className="btn btn-filled" style={{ display: 'flex', width: '100%' }}>
+                  Abrir el curso en Moodle <IconoEnlace size={14} />
+                </a>
+              </div>
             )}
 
-            <label>Descripción / apuntes</label>
+            <label htmlFor="ev-descripcion">Descripción / apuntes</label>
             {esOrigenMoodle && descripcion ? (
-              <div className="descripcion-moodle">{descripcion}</div>
+              <div className="descripcion-lectura">{descripcion}</div>
             ) : (
-              <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)}
-                placeholder="Lo que dijo el profesor, temas, enlaces, detalles..." />
+              <textarea id="ev-descripcion" value={descripcion} onChange={e => setDescripcion(e.target.value)}
+                placeholder="Lo que dijo el profesor, temas, enlaces, detalles…" />
             )}
 
             {esEdicion && (
               <div className="notas-section">
-                <h3 className="notas-titulo">
-                  <MessageSquare size={13} /> Notas del grupo
-                  <span className="contador">{notas.length}</span>
-                </h3>
+                <h3>Notas del grupo {notas.length > 0 && <span style={{ color: 'var(--text-faint)', fontWeight: 400 }}>({notas.length})</span>}</h3>
                 {notas.map(n => (
                   <div key={n.id} className="nota-item">
                     <div className="nota-autor">{n.usuarios?.nombre || 'Anónimo'}</div>
@@ -164,10 +163,8 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
                 ))}
                 <form onSubmit={guardarNota} className="nota-form">
                   <input type="text" value={nuevaNota} onChange={e => setNuevaNota(e.target.value)}
-                    placeholder="Nota rápida para el grupo..." />
-                  <button type="submit" className="btn btn-filled nota-enviar" aria-label="Añadir nota">
-                    <Plus size={15} />
-                  </button>
+                    placeholder="Nota rápida para el grupo…" aria-label="Nueva nota" />
+                  <button type="submit" className="btn btn-filled">Añadir</button>
                 </form>
               </div>
             )}
@@ -175,14 +172,10 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
 
           <div className="modal-footer">
             {esEdicion && !esOrigenMoodle && (
-              <button type="button" className="btn btn-danger" onClick={() => onEliminar(evento.id)}>
-                <Trash2 size={14} /> Eliminar
-              </button>
+              <button type="button" className="btn btn-danger btn-eliminar" onClick={() => onEliminar(evento.id)}>Eliminar</button>
             )}
             {esEdicion && (
-              <button type="button" className="btn" onClick={() => onDuplicar(evento.id)}>
-                <Copy size={14} /> Duplicar +1 día
-              </button>
+              <button type="button" className="btn" onClick={() => onDuplicar(evento.id)}>Duplicar +1 día</button>
             )}
             <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
             <button type="submit" className="btn btn-filled" disabled={esOrigenMoodle}>

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import { MODULOS } from './modulos.js';
-import { Siren, TriangleAlert, Clock, Check, ExternalLink } from 'lucide-react';
+import { MODULOS, tinte } from './modulos.js';
+import { IconoCheck } from './Icons.jsx';
 
 const API = import.meta.env.VITE_API_URL;
 
-/** Entrega cuyo plazo de cierre cae pronto. Rojo si quedan menos de 12 h. */
+/** Aviso de entregas cuyo plazo de cierre se acerca. */
 export default function AlertaCierres({ sala, onMarcarEntregado }) {
   const [cierres, setCierres] = useState([]);
   const [minimizada, setMinimizada] = useState(
@@ -20,7 +20,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
           const d = await res.json();
           setCierres(d.cierres || []);
         }
-      } catch { /* backend dormido */ }
+      } catch { /* backend dormido, no molestar */ }
     }
     cargar();
     const id = setInterval(cargar, 5 * 60 * 1000);
@@ -31,8 +31,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
 
   const critico = cierres.some(c => c.nivel === 'critico');
   const urgente = cierres.some(c => c.nivel === 'urgente');
-  const nivel = critico ? 'critico' : urgente ? 'urgente' : 'proximo';
-  const IconoBanner = critico ? Siren : urgente ? TriangleAlert : Clock;
+  const tono = critico ? '#a4443c' : urgente ? '#a85f33' : '#8a6a26';
 
   function toggleMinimizar() {
     const v = !minimizada;
@@ -40,39 +39,40 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
     sessionStorage.setItem('caldaw_cierres_min', v ? '1' : '0');
   }
 
-  function textoHoras(c) {
-    return c.horas < 1 ? `${Math.round(c.horas * 60)} min` : `${c.horas} h`;
-  }
-
   return (
-    <div className={`banner banner-cierre ${nivel}`}>
-      <div className="banner-cabecera">
-        <IconoBanner size={16} className="banner-icono" />
-        <strong className="banner-titulo">
+    <div className="aviso-banda" style={{ '--tono': tono }}>
+      <div className="aviso-cabecera">
+        <span className="punto-estado" style={{ background: tono }} aria-hidden="true" />
+        <strong>
           {cierres.length} {cierres.length === 1 ? 'entrega cierra pronto' : 'entregas cierran pronto'}
         </strong>
-        <button className="banner-accion" onClick={toggleMinimizar}>
+        <button onClick={toggleMinimizar} className="btn-texto">
           {minimizada ? 'ver' : 'ocultar'}
         </button>
       </div>
 
       {!minimizada && (
-        <div className="cierre-lista">
+        <div className="aviso-lista">
           {cierres.map(c => {
-            const mod = MODULOS.find(m => m.id === c.modulo_id) || { nombre: String(c.modulo_id || '?').toUpperCase(), color: '#6b7280' };
+            const mod = MODULOS.find(m => m.id === c.modulo_id) || { nombre: c.modulo_id?.toUpperCase(), color: '#74716a' };
             return (
-              <div key={c.id} className={`cierre-fila ${c.nivel}`}>
-                <span className="cierre-chip" style={{ background: mod.color }}>{mod.nombre}</span>
-                <span className="cierre-titulo">{c.titulo}</span>
-                <span className="cierre-horas">{textoHoras(c)}</span>
+              <div key={c.id} className="aviso-fila">
+                <span className="etiqueta" style={{ background: tinte(mod.color, 0.12), color: mod.color }}>{mod.nombre}</span>
+                <span className="aviso-fila-titulo">{c.titulo}</span>
+                <span className="aviso-horas" style={{ color: c.nivel === 'critico' ? '#a4443c' : c.nivel === 'urgente' ? '#a85f33' : 'var(--text-muted)' }}>
+                  {c.horas < 1 ? `${Math.round(c.horas * 60)} min` : `${c.horas} h`}
+                </span>
                 {c.enlace && (
-                  <a href={c.enlace} target="_blank" rel="noreferrer" className="cierre-enlace" title="Abrir en Moodle">
-                    <ExternalLink size={13} />
+                  <a href={c.enlace} target="_blank" rel="noreferrer" className="enlace-evento" style={{ fontSize: '0.72rem' }}>
+                    abrir
                   </a>
                 )}
-                <button className="cierre-check" title="Marcar como entregada"
-                  onClick={() => onMarcarEntregado(c.id)}>
-                  <Check size={13} strokeWidth={3} />
+                <button
+                  onClick={() => onMarcarEntregado(c.id)}
+                  title="Marcar como entregada"
+                  aria-label="Marcar como entregada"
+                  className="btn-mini">
+                  <IconoCheck size={12} />
                 </button>
               </div>
             );

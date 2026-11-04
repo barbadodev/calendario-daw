@@ -15,7 +15,7 @@ export function aplicarTema(tema) {
   document.documentElement.style.colorScheme = tema === 'claro' ? 'light' : 'dark';
   // El color de la barra del navegador en el móvil (manifest/theme-color)
   const meta = document.querySelector('meta[name="theme-color"]');
-  if (meta) meta.setAttribute('content', tema === 'claro' ? '#f8fafc' : '#0f172a');
+  if (meta) meta.setAttribute('content', tema === 'claro' ? '#f6f5f2' : '#1b1a18');
 }
 
 export function initTema() {

@@ -11,26 +11,12 @@ import PlanEstudio from './PlanEstudio.jsx';
 import ContadorProximo from './ContadorProximo.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
 import AlertaCierres from './AlertaCierres.jsx';
+import { MODULOS } from './modulos.js';
+import { IconoAjustes, IconoSalir, IconoMas, IconoCheck, IconoSol, IconoLuna } from './Icons.jsx';
+import { setTema, temaActual } from './tema.js';
 import { supabase } from './supabase.js';
-import { setTema, temaActual, temaPreferido } from './tema.js';
-import { CalendarDays, LogOut, Settings, Sun, Moon, Plus, Check, TriangleAlert } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
-
-const MODULOS = [
-  { id: 'ipe',  nombre: 'IPE',      color: '#8b5cf6' },
-  { id: 'dwec', nombre: 'DWEC',     color: '#3b82f6' },
-  { id: 'dwes', nombre: 'DWES',     color: '#10b981' },
-  { id: 'daw',  nombre: 'DAW',      color: '#f97316' },
-  { id: 'diw',  nombre: 'DIW',      color: '#ec4899' },
-  { id: 'en',   nombre: 'Inglés',   color: '#06b6d4' },
-  { id: 'opt',  nombre: 'Optativa', color: '#eab308' },
-  { id: 'proy', nombre: 'Proyecto', color: '#ef4444' },
-];
-
-export function getModulo(id) {
-  return MODULOS.find(m => m.id === id) || { id, nombre: id?.toUpperCase() || 'OTRO', color: '#6b7280' };
-}
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
@@ -65,6 +51,8 @@ export default function App() {
   }, []);
 
   useEffect(() => { localStorage.setItem('caldaw_vista', vista); }, [vista]);
+  // Al volver de Ajustes, el icono del tema refleja lo que se haya elegido allí
+  useEffect(() => { setTemaEstado(temaActual()); }, [vista]);
   useEffect(() => { localStorage.setItem('caldaw_pend', soloPendientes ? '1' : '0'); }, [soloPendientes]);
 
   useEffect(() => {
@@ -111,7 +99,7 @@ export default function App() {
       setModalAbierto(false);
       cargarEventos();
       mostrarAviso('Evento guardado' + textoAvisos(d));
-    } else mostrarAviso('No se pudo guardar', 'error');
+    } else mostrarAviso('No se pudo guardar el evento', 'error');
   }
 
   async function actualizarEvento(id, eventoData) {
@@ -192,58 +180,71 @@ export default function App() {
   return (
     <>
       <header className="app-header">
-        <h1><CalendarDays size={18} /> CalDAW <span className="user-badge">{usuario.nombre}</span></h1>
-        <div className="header-actions">
-          <button className="btn-icon" onClick={alternarTema}
-            title={tema === 'oscuro' ? 'Poner modo claro' : 'Poner modo oscuro'}>
-            {tema === 'oscuro' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-          <button className="btn-icon" onClick={() => setVista('ajustes')} title="Ajustes">
-            <Settings size={16} />
-          </button>
-          <button className="btn-icon" onClick={cerrarSesion} title="Cerrar sesión">
-            <LogOut size={16} />
-          </button>
+        <div className="header-inner">
+          <div className="marca">
+            <span className="marca-icono" aria-hidden="true" />
+            <h1>CalDAW</h1>
+            <span className="user-badge">{usuario.nombre}</span>
+          </div>
+          <div className="header-actions">
+            <button className="btn-icon" onClick={alternarTema}
+              title={tema === 'oscuro' ? 'Poner modo claro' : 'Poner modo oscuro'}
+              aria-label="Cambiar entre modo claro y oscuro">
+              {tema === 'oscuro' ? <IconoSol /> : <IconoLuna />}
+            </button>
+            <button className="btn-icon" onClick={() => setVista('ajustes')} title="Ajustes" aria-label="Ajustes">
+              <IconoAjustes />
+            </button>
+            <button className="btn-icon" onClick={cerrarSesion} title="Cerrar sesión" aria-label="Cerrar sesión">
+              <IconoSalir />
+            </button>
+          </div>
         </div>
       </header>
 
-      <ContadorProximo eventos={eventos} />
-      <AlertaCierres sala={usuario.codigo_sala} onMarcarEntregado={marcarEntregado} />
-      <BannerMoodle sala={usuario.codigo_sala} />
+      <main className="app-main">
+        <ContadorProximo eventos={eventos} />
+        <AlertaCierres sala={usuario.codigo_sala} onMarcarEntregado={marcarEntregado} />
+        <BannerMoodle sala={usuario.codigo_sala} />
 
-      <nav className="view-tabs">
-        {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['plan','Plan'],['stats','Stats'],['notas','Notas']].map(([id, label]) => (
-          <button key={id} className={`view-tab ${vista === id ? 'active' : ''}`} onClick={() => setVista(id)}>{label}</button>
-        ))}
-      </nav>
+        <nav className="view-tabs">
+          {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['plan','Plan'],['stats','Estadísticas'],['notas','Notas']].map(([id, label]) => (
+            <button key={id} className={`view-tab ${vista === id ? 'active' : ''}`} onClick={() => setVista(id)}>{label}</button>
+          ))}
+        </nav>
 
-      <div className="filtros-bar">
-        <button className={`filtro-chip ${filtroModulo === 'todos' ? 'active' : ''}`}
-          style={filtroModulo === 'todos' ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
-          onClick={() => setFiltroModulo('todos')}>Todos</button>
-        {MODULOS.map(m => (
-          <button key={m.id} className={`filtro-chip ${filtroModulo === m.id ? 'active' : ''}`}
-            style={filtroModulo === m.id ? { background: m.color, borderColor: m.color } : {}}
-            onClick={() => setFiltroModulo(m.id)}>{m.nombre}</button>
-        ))}
-        <button className={`filtro-chip ${soloPendientes ? 'active' : ''}`}
-          style={soloPendientes ? { background: 'var(--success)', borderColor: 'var(--success)' } : {}}
-          onClick={() => setSoloPendientes(v => !v)}><Check size={11} strokeWidth={3} /> Pendientes</button>
-      </div>
+        {['mes', 'semana', 'lista'].includes(vista) && (
+          <div className="filtros-bar">
+            <button className={`filtro-chip ${filtroModulo === 'todos' ? 'active' : ''}`}
+              style={filtroModulo === 'todos' ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+              onClick={() => setFiltroModulo('todos')}>Todos</button>
+            {MODULOS.map(m => (
+              <button key={m.id} className={`filtro-chip ${filtroModulo === m.id ? 'active' : ''}`}
+                style={filtroModulo === m.id ? { background: m.color, borderColor: m.color } : {}}
+                onClick={() => setFiltroModulo(m.id)}>{m.nombre}</button>
+            ))}
+            <button className={`filtro-chip ${soloPendientes ? 'active' : ''}`}
+              style={soloPendientes ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
+              onClick={() => setSoloPendientes(v => !v)}>
+              {soloPendientes && <IconoCheck size={12} />} Pendientes
+            </button>
+          </div>
+        )}
 
-      {vista === 'mes' && <Calendario eventos={eventosVista} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
-      {vista === 'semana' && <VistaSemanal eventos={eventosVista} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
-      {vista === 'lista' && <ListaEventos eventos={eventosVista} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
-      {vista === 'plan' && <PlanEstudio usuario={usuario} />}
-      {vista === 'stats' && <Estadisticas usuario={usuario} eventos={eventos} />}
-      {vista === 'notas' && <NotasModulo usuario={usuario} />}
-      {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
+        {vista === 'mes' && <Calendario eventos={eventosVista} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
+        {vista === 'semana' && <VistaSemanal eventos={eventosVista} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
+        {vista === 'lista' && <ListaEventos eventos={eventosVista} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
+        {vista === 'plan' && <PlanEstudio usuario={usuario} />}
+        {vista === 'stats' && <Estadisticas usuario={usuario} eventos={eventos} />}
+        {vista === 'notas' && <NotasModulo usuario={usuario} />}
+        {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
 
-      {['mes','semana','lista'].includes(vista) && (
-        <button className="fab" onClick={() => abrirModalCrear()} title="Nuevo evento">
-          <Plus size={22} strokeWidth={2.4} />
-        </button>
-      )}
+        {['mes','semana','lista'].includes(vista) && (
+          <button className="fab" onClick={() => abrirModalCrear()} title="Nuevo evento" aria-label="Nuevo evento">
+            <IconoMas size={22} />
+          </button>
+        )}
+      </main>
 
       {modalAbierto && (
         <ModalEvento
@@ -260,9 +261,8 @@ export default function App() {
       )}
 
       {aviso && (
-        <div className={`toast toast-${aviso.tipo}`} onClick={() => setAviso(null)} role="status">
-          {aviso.tipo === 'error' ? <TriangleAlert size={15} /> : <Check size={15} strokeWidth={2.6} />}
-          <span>{aviso.texto}</span>
+        <div className={`toast toast-${aviso.tipo}`} onClick={() => setAviso(null)}>
+          {aviso.texto}
         </div>
       )}
     </>

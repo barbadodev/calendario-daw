@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { parseISO, differenceInDays, isPast, format } from 'date-fns';
-import { getModulo } from './App.jsx';
+import { parseISO, differenceInDays, format } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { getModulo, tinte } from './modulos.js';
 
 export default function ContadorProximo({ eventos }) {
   const [prximo, setPrximo] = useState(null);
@@ -18,26 +19,18 @@ export default function ContadorProximo({ eventos }) {
 
   const dias = differenceInDays(parseISO(prximo.fecha_inicio), new Date());
   const mod = getModulo(prximo.modulo_id);
-  const label = dias === 0 ? 'HOY' : dias === 1 ? 'MAÑANA' : `en ${dias} días`;
+  const label = dias === 0 ? 'Hoy' : dias === 1 ? 'Mañana' : `En ${dias} días`;
 
   return (
-    <div
-      className="contador-proximo"
-      style={{
-        background: `linear-gradient(135deg, ${mod.color}22, ${mod.color}11)`,
-        borderLeft: `4px solid ${mod.color}`,
-      }}
-    >
-      <span className="contador-icono">⏰</span>
+    <div className="contador-proximo">
+      <span className="contador-punto" style={{ background: mod.color }} aria-hidden="true" />
       <div className="contador-texto">
-        <strong>{label}</strong> ·{' '}
-        <span style={{ background: mod.color, color: 'white', padding: '2px 8px', borderRadius: 4, fontSize: '0.75rem', fontWeight: 600 }}>
-          {mod.nombre}
-        </span>{' '}
-        {prximo.titulo}
+        <span className="contador-etiqueta">{label}</span>
+        <span className="contador-titulo">{prximo.titulo}</span>
+        <span className="etiqueta" style={{ background: tinte(mod.color, 0.12), color: mod.color }}>{mod.nombre}</span>
       </div>
       <div className="contador-fecha">
-        {format(parseISO(prximo.fecha_inicio), 'd MMM HH:mm')}
+        {format(parseISO(prximo.fecha_inicio), 'd MMM · HH:mm', { locale: es })}
       </div>
     </div>
   );
