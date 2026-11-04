@@ -8,10 +8,7 @@ export default function Ajustes({ usuario, eventos }) {
   const [notifActiva, setNotifActiva] = useState(false);
   const [mensaje, setMensaje] = useState('');
   const [sincronizando, setSincronizando] = useState(false);
-  const [probandoNotif, setProbandoNotif] = useState(false);
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
-  const [subs, setSubs] = useState([]);
-  const [mostrarSubs, setMostrarSubs] = useState(false);
   const [resumen, setResumen] = useState('');
 
   useEffect(() => {
@@ -37,7 +34,7 @@ export default function Ajustes({ usuario, eventos }) {
       const pubKeyRes = await fetch(`${API_URL}/api/push/vapid-public-key`);
       const { publicKey } = await pubKeyRes.json();
 
-      // Si hay una suscripción previa con otra VAPID key, la borramos primero
+      // Si había una suscripción previa (p. ej. con otra clave VAPID), se limpia primero
       let sub = await reg.pushManager.getSubscription();
       if (sub) {
         try { await sub.unsubscribe(); } catch { /* da igual */ }
@@ -50,11 +47,12 @@ export default function Ajustes({ usuario, eventos }) {
           applicationServerKey: urlBase64ToUint8Array(publicKey),
         });
       } catch (err) {
-        // Segunda vez: si aún dice mismatch, limpiamos registration completa y reintentamos
-        if (String(err.message || '').toLowerCase().includes('match') || String(err.name || '').toLowerCase().includes('invalid')) {
+        // Reintento una vez si el navegador se quejó de la clave
+        const msg = String(err.message || '').toLowerCase();
+        if (msg.includes('match') || msg.includes('invalid')) {
           try {
-            const oldSub = await reg.pushManager.getSubscription();
-            if (oldSub) await oldSub.unsubscribe();
+            const old = await reg.pushManager.getSubscription();
+            if (old) await old.unsubscribe();
           } catch { /* nada */ }
           await new Promise(r => setTimeout(r, 500));
           sub = await reg.pushManager.subscribe({
@@ -66,14 +64,6 @@ export default function Ajustes({ usuario, eventos }) {
         }
       }
 
-      const plataforma = detectarPlataforma();
-      const sugerida = `${plataforma} de ${usuario.nombre}`;
-      const etiqueta = (window.prompt(
-        'Ponle nombre a este dispositivo para poder identificarlo\n' +
-        '(ej: "iPhone de Antonio Barbado")',
-        sugerida
-      ) ?? sugerida).trim() || sugerida;
-
       const res = await fetch(`${API_URL}/api/push/suscribir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -81,20 +71,18 @@ export default function Ajustes({ usuario, eventos }) {
           sala: usuario.codigo_sala,
           usuarioId: usuario.id,
           suscripcion: sub.toJSON(),
-          etiqueta,
-          plataforma,
         }),
       });
       if (res.ok) {
         setNotifActiva(true);
-        setMensaje('✅ Notificaciones activadas con éxito');
+        setMensaje('✅ Notificaciones activadas');
       } else {
         const err = await res.json();
         setMensaje('❌ ' + (err.error || 'Error al registrar la suscripción'));
       }
     } catch (err) {
       console.error('Error activando notificaciones:', err);
-      setMensaje('❌ Error: ' + (err.message || 'no se pudo activar. Borra la app y reinstálala.'));
+      setMensaje('❌ ' + (err.message || 'No se pudo activar'));
     }
   }
 
@@ -109,114 +97,7 @@ export default function Ajustes({ usuario, eventos }) {
     if (res.ok) setMensaje('✅ Sincronización completada. Recarga si no ves los cambios.');
     else setMensaje('❌ Error sincronizando');
     setSincronizando(false);
-    // Recarga tras 2 segundos para que se apliquen cambios
     setTimeout(() => window.location.reload(), 2000);
-  }
-
-  async function verSuscripciones() {
-    const nuevoEstado = !mostrarSubs;
-    setMostrarSubs(nuevoEstado);
-    if (!nuevoEstado) return;
-
-    // Para saber cuál de la lista es ESTE dispositivo
-    let miPista = null;
-    try {
-      const reg = await navigator.serviceWorker.getRegistration();
-      const actual = await reg?.pushManager?.getSubscription();
-      if (actual) miPista = actual.endpoint.slice(0, 70);
-    } catch { /* sin soporte */ }
-
-    try {
-      const res = await fetch(`${API_URL}/api/push/suscripciones?sala=${usuario.codigo_sala}`);
-      const data = await res.json();
-      setSubs((data.suscripciones || []).map(s => ({ ...s, es_mio: !!(miPista && s.pista === miPista) })));
-    } catch (err) {
-      setSubs([]);
-    }
-  }
-
-  async function renombrarDispositivo(s) {
-    const nueva = window.prompt('Nombre para este dispositivo:', s.etiqueta || s.nombre_sugerido);
-    if (nueva === null) return;
-    const res = await fetch(`${API_URL}/api/push/suscripcion/${s.id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, etiqueta: nueva }),
-    });
-    if (res.ok) {
-      setMensaje(`✏️ Renombrado a "${nueva.trim() || s.nombre_sugerido}"`);
-      const r2 = await fetch(`${API_URL}/api/push/suscripciones?sala=${usuario.codigo_sala}`);
-      const d2 = await r2.json();
-      setSubs(d2.suscripciones || []);
-    } else setMensaje('❌ No se pudo renombrar');
-  }
-
-  async function revocarDispositivo(s) {
-    const texto = s.es_mio
-      ? `Vas a QUITAR este dispositivo (${s.etiqueta || s.nombre_sugerido}).\n\nDejarás de recibir notificaciones hasta que vuelvas a activarlas.`
-      : `Vas a QUITAR el dispositivo "${s.etiqueta || s.nombre_sugerido}" de ${s.dueno}.\n\nEse móvil dejará de recibir notificaciones aunque tenga la app abierta.`;
-    if (!confirm(texto)) return;
-
-    const res = await fetch(`${API_URL}/api/push/suscripcion/${s.id}?sala=${encodeURIComponent(usuario.codigo_sala)}`, {
-      method: 'DELETE',
-    });
-    if (!res.ok) { setMensaje('❌ No se pudo quitar'); return; }
-
-    if (s.es_mio) {
-      try {
-        const reg = await navigator.serviceWorker.getRegistration();
-        const actual = await reg?.pushManager?.getSubscription();
-        if (actual) await actual.unsubscribe();
-        setNotifActiva(false);
-      } catch { /* nada */ }
-    }
-    setMensaje(`🗑️ Quitado: ${s.etiqueta || s.nombre_sugerido}`);
-    setSubs(prev => prev.filter(x => x.id !== s.id));
-  }
-
-  async function resetearSubs() {
-    if (!confirm('¿Borrar TODAS las suscripciones push del grupo? Cada uno tendrá que volver a activarlas.')) return;
-    try {
-      const res = await fetch(`${API_URL}/api/push/reset`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sala: usuario.codigo_sala }),
-      });
-      const data = await res.json();
-      setMensaje('✅ ' + (data.msg || 'Reset hecha. Activa de nuevo las notificaciones.'));
-      setSubs([]);
-      setMostrarSubs(false);
-      setNotifActiva(false);
-    } catch (err) {
-      setMensaje('❌ ' + err.message);
-    }
-  }
-
-  async function probarNotificacion() {
-    setProbandoNotif(true);
-    try {
-      const info = await fetch(`${API_URL}/api/push/suscripciones-count?sala=${usuario.codigo_sala}`);
-      const { total } = await info.json();
-      if (total === 0) {
-        setMensaje('⚠️ Nadie está suscrito todavía. Activa antes las notificaciones desde arriba.');
-        setProbandoNotif(false);
-        return;
-      }
-      const res = await fetch(`${API_URL}/api/push/test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sala: usuario.codigo_sala,
-          titulo: '🧪 Prueba DAW',
-          cuerpo: `Enviada a ${total} dispositivo(s). Si la ves, todo OK 🎉`,
-        }),
-      });
-      const data = await res.json();
-      setMensaje(`✅ Enviadas: ${data.enviadas} · Dispositivos caducados: ${data.caducadas}`);
-    } catch (err) {
-      setMensaje('❌ Error al enviar: ' + err.message);
-    }
-    setProbandoNotif(false);
   }
 
   async function generarResumen(dias) {
@@ -224,7 +105,7 @@ export default function Ajustes({ usuario, eventos }) {
       const res = await fetch(`${API_URL}/api/resumen-semana?sala=${usuario.codigo_sala}&dias=${dias}`);
       const data = await res.json();
       setResumen(data.texto || 'Sin eventos');
-    } catch (err) {
+    } catch {
       setMensaje('❌ No se pudo generar el resumen');
     }
   }
@@ -256,70 +137,17 @@ export default function Ajustes({ usuario, eventos }) {
       </div>
 
       <div className="ajustes-card">
-        <h3>🔔 Notificaciones push</h3>
+        <h3>🔔 Notificaciones</h3>
         <div className="ajustes-item">
-          <span className="ajustes-item-label">Recibir avisos en el móvil</span>
+          <span className="ajustes-item-label">Avisos en este dispositivo</span>
           {notifActiva
-            ? <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>✅ Activas</span>
+            ? <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>✅ Activadas</span>
             : <button className="btn btn-filled" onClick={activarNotificaciones}>Activar</button>
           }
         </div>
-        <div className="ajustes-item">
-          <span className="ajustes-item-label">Enviar notificación de prueba</span>
-          <button className="btn" onClick={probarNotificacion} disabled={probandoNotif}>
-            {probandoNotif ? 'Enviando...' : '🧪 Probar'}
-          </button>
-        </div>
-        <div className="ajustes-item">
-          <span className="ajustes-item-label">Dispositivos suscritos</span>
-          <div style={{ display: 'flex', gap: 4 }}>
-            <button className="btn" onClick={verSuscripciones}>{mostrarSubs ? 'Ocultar' : 'Ver'}</button>
-            <button className="btn btn-danger" onClick={resetearSubs}>Resetear</button>
-          </div>
-        </div>
-        {mostrarSubs && (
-          <div style={{ marginTop: 10 }}>
-            {subs.length === 0 ? (
-              <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>Ningún dispositivo suscrito.</p>
-            ) : subs.map(s => (
-              <div key={s.id} style={{
-                display: 'flex', alignItems: 'center', gap: '0.5rem',
-                padding: '0.5rem 0', borderBottom: '1px solid var(--border)', fontSize: '0.8125rem',
-              }}>
-                <span style={{ fontSize: '1rem', flexShrink: 0 }}>
-                  {s.proveedor === 'iOS' ? '📱' : s.proveedor === 'Android' ? '🤖' : '💻'}
-                </span>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {s.etiqueta || <span style={{ color: 'var(--text-muted)', fontStyle: 'italic' }}>sin nombre</span>}
-                  </div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--text-muted)' }}>
-                    de <strong>{s.dueno}</strong>
-                    {s.es_mio && <span style={{ color: 'var(--primary)', fontWeight: 600 }}> · 👉 este</span>}
-                    {s.es_solo_dispositivo && ' · ⚠️ este miembro tiene varios dispositivos'}
-                    {' · '}activado {new Date(s.activado).toLocaleDateString('es-ES')}
-                    {s.ultima_vez ? ` · usado ${new Date(s.ultima_vez).toLocaleDateString('es-ES')}` : ''}
-                  </div>
-                </div>
-
-                <button className="btn" title="Renombrar"
-                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', flexShrink: 0 }}
-                  onClick={() => renombrarDispositivo(s)}>
-                  ✏️
-                </button>
-                <button className="btn btn-danger" title="Quitar este dispositivo"
-                  style={{ padding: '0.3rem 0.5rem', fontSize: '0.7rem', flexShrink: 0 }}
-                  onClick={() => revocarDispositivo(s)}>
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
         {mensaje && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4 }}>{mensaje}</p>}
         <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 8, fontStyle: 'italic' }}>
-          💡 En iPhone solo funcionan si instalaste la web como app (Safari → Compartir → Añadir a pantalla de inicio) y la abres desde ahí, no desde Safari.
+          💡 En iPhone hay que abrirla desde el icono de pantalla de inicio (Safari → Compartir → Añadir a pantalla de inicio), no desde Safari.
         </p>
       </div>
 
@@ -338,12 +166,12 @@ export default function Ajustes({ usuario, eventos }) {
       <div className="ajustes-card">
         <h3>📆 Exportar a Google/Apple Calendar</h3>
         <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          Pega esta URL en Google Calendar → "Otros calendarios" → "Desde URL" y tendrás tus eventos junto al resto de tu calendario del móvil.
+          Pega esta URL en Google Calendar → "Otros calendarios" → "Desde URL" (en iPhone: Ajustes → Calendarios → Cuentas → Calendario de suscripción).
         </p>
         {!mostrarIcsUrl ? (
           <button className="btn" onClick={() => setMostrarIcsUrl(true)}>🔗 Mostrar URL</button>
         ) : (
-          <div className="code" style={{ background: 'var(--bg)', padding: '0.75rem', borderRadius: 6, fontSize: '0.7rem', wordBreak: 'break-all' }}>
+          <div style={{ background: 'var(--bg)', padding: '0.75rem', borderRadius: 6, fontSize: '0.7rem', wordBreak: 'break-all' }}>
             {icsUrl}
             <button className="btn" onClick={() => navigator.clipboard.writeText(icsUrl).then(() => alert('Copiado ✅'))}
               style={{ display: 'block', marginTop: '0.5rem', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
@@ -404,22 +232,9 @@ export default function Ajustes({ usuario, eventos }) {
         </div>
         <div className="ajustes-item">
           <span className="ajustes-item-label">Versión</span>
-          <span className="ajustes-item-valor">1.3.0</span>
+          <span className="ajustes-item-valor">1.3.1</span>
         </div>
       </div>
     </div>
   );
-}
-
-/** Nombre aproximado del dispositivo, deducido del navegador. */
-function detectarPlataforma() {
-  const ua = navigator.userAgent || '';
-  if (/iPhone/i.test(ua)) return 'iPhone';
-  if (/iPad/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1)) return 'iPad';
-  if (/iPod/i.test(ua)) return 'iPod';
-  if (/Android/i.test(ua)) return 'Android';
-  if (/Windows NT/i.test(ua)) return 'PC Windows';
-  if (/Mac OS X/i.test(ua)) return 'Mac';
-  if (/Linux/i.test(ua)) return 'Linux';
-  return 'Dispositivo';
 }
