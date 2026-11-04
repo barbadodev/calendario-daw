@@ -614,7 +614,7 @@ input, textarea, select {
   color: white;
 }
 
-.btn-danger:hover { background: #dc2626; }
+.btn-danger:hover { filter: brightness(.88); }
 
 /* ====== NOTAS ====== */
 .notas-section {

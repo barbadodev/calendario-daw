@@ -219,7 +219,7 @@ export default function App() {
 
       <div className="filtros-bar">
         <button className={`filtro-chip ${filtroModulo === 'todos' ? 'active' : ''}`}
-          style={filtroModulo === 'todos' ? { background: '#6366f1', borderColor: '#6366f1' } : {}}
+          style={filtroModulo === 'todos' ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
           onClick={() => setFiltroModulo('todos')}>Todos</button>
         {MODULOS.map(m => (
           <button key={m.id} className={`filtro-chip ${filtroModulo === m.id ? 'active' : ''}`}
