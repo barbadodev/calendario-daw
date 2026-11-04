@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import Login from './Login.jsx';
 import Calendario from './Calendario.jsx';
 import VistaSemanal from './VistaSemanal.jsx';
@@ -8,7 +8,6 @@ import Ajustes from './Ajustes.jsx';
 import Estadisticas from './Estadisticas.jsx';
 import NotasModulo from './NotasModulo.jsx';
 import PlanEstudio from './PlanEstudio.jsx';
-import ContadorProximo from './ContadorProximo.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
 import AlertaCierres from './AlertaCierres.jsx';
 import { MODULOS } from './modulos.js';
@@ -43,7 +42,7 @@ export default function App() {
     setTimeout(() => setAviso(null), 4500);
   }
 
-  // Recuperar sesión y abrir deep-link ?evento=xxx (desde notificación)
+  // Recuperar sesiÃ³n y abrir deep-link ?evento=xxx (desde notificaciÃ³n)
   useEffect(() => {
     const guardado = localStorage.getItem('usuario');
     if (guardado) setUsuario(JSON.parse(guardado));
@@ -52,7 +51,7 @@ export default function App() {
   }, []);
 
   useEffect(() => { localStorage.setItem('caldaw_vista', vista); }, [vista]);
-  // Al volver de Ajustes, el icono del tema refleja lo que se haya elegido allí
+  // Al volver de Ajustes, el icono del tema refleja lo que se haya elegido allÃ­
   useEffect(() => { setTemaEstado(temaActual()); }, [vista]);
   useEffect(() => { localStorage.setItem('caldaw_pend', soloPendientes ? '1' : '0'); }, [soloPendientes]);
 
@@ -81,7 +80,7 @@ export default function App() {
     return () => supabase.removeChannel(channel);
   }, [usuario]);
 
-  // Abrir el evento que venía en el enlace de la notificación
+  // Abrir el evento que venÃ­a en el enlace de la notificaciÃ³n
   useEffect(() => {
     if (!eventoDestacado || eventos.length === 0) return;
     const ev = eventos.find(e => e.id === eventoDestacado);
@@ -100,8 +99,8 @@ export default function App() {
   function textoAvisos(d) {
     if (d.avisados === undefined) return '';
     return d.avisados > 0
-      ? ` · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
-      : ' · nadie tiene las notificaciones activas';
+      ? ` Â· avisados ${d.avisados} compaÃ±ero${d.avisados === 1 ? '' : 's'}`
+      : ' Â· nadie tiene las notificaciones activas';
   }
 
   async function crearEvento(eventoData) {
@@ -132,7 +131,7 @@ export default function App() {
   }
 
   async function eliminarEvento(id) {
-    if (!confirm('¿Eliminar este evento?')) return;
+    if (!confirm('Â¿Eliminar este evento?')) return;
     const res = await fetch(`${API_URL}/api/eventos/${id}`, {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
@@ -158,7 +157,7 @@ export default function App() {
     const ev = eventos.find(e => e.id === id);
     if (!ev || ev.completado) return;
     await toggleCompletar(id, ev.completado);
-    mostrarAviso(`${ev.titulo.slice(0, 40)} · marcada como entregada`);
+    mostrarAviso(`${ev.titulo.slice(0, 40)} Â· marcada como entregada`);
     // Avisa al grupo de que ya la has subido
     fetch(`${API_URL}/api/eventos/${id}/notas`, {
       method: 'POST',
@@ -199,7 +198,7 @@ export default function App() {
         <div className="header-inner">
           <div className="marca">
             <span className="marca-icono" aria-hidden="true" />
-            <h1>CalDAW</h1>
+            <h1>DAW</h1>
             <span className="user-badge">{usuario.nombre}</span>
           </div>
           <div className="header-actions">
@@ -211,7 +210,7 @@ export default function App() {
             <button className="btn-icon" onClick={() => setVista('ajustes')} title="Ajustes" aria-label="Ajustes">
               <IconoAjustes />
             </button>
-            <button className="btn-icon" onClick={cerrarSesion} title="Cerrar sesión" aria-label="Cerrar sesión">
+            <button className="btn-icon" onClick={cerrarSesion} title="Cerrar sesiÃ³n" aria-label="Cerrar sesiÃ³n">
               <IconoSalir />
             </button>
           </div>
@@ -219,12 +218,11 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <ContadorProximo eventos={eventos} />
         <AlertaCierres sala={usuario.codigo_sala} onMarcarEntregado={marcarEntregado} />
         <BannerMoodle sala={usuario.codigo_sala} />
 
         <nav className="view-tabs">
-          {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['plan','Plan'],['stats','Estadísticas'],['notas','Notas']].map(([id, label]) => (
+          {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['plan','Plan'],['stats','EstadÃ­sticas'],['notas','Notas']].map(([id, label]) => (
             <button key={id} className={`view-tab ${vista === id ? 'active' : ''}`} onClick={() => setVista(id)}>{label}</button>
           ))}
         </nav>
