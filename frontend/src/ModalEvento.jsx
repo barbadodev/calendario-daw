@@ -3,6 +3,7 @@ import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { MODULOS, TIPOS } from './modulos.js';
 import { useBloquearScroll } from './useEsMovil.js';
+import { X, GraduationCap, MessageSquare, Plus, Copy, Trash2 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -37,9 +38,11 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   }, [evento, fechaInicial]);
 
   async function cargarNotas(id) {
-    const res = await fetch(`${API_URL}/api/eventos/${id}/notas?sala=${usuario.codigo_sala}`);
-    const { notas } = await res.json();
-    setNotas(notas || []);
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${id}/notas?sala=${usuario.codigo_sala}`);
+      const { notas } = await res.json();
+      setNotas(notas || []);
+    } catch { setNotas([]); }
   }
 
   async function guardarNota(e) {
@@ -56,8 +59,8 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
       cargarNotas(evento.id);
       if (onAviso) {
         onAviso(d.avisados > 0
-          ? `💬 Nota guardada · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
-          : '💬 Nota guardada · ⚠️ nadie tiene las notificaciones activas');
+          ? `Nota guardada · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
+          : 'Nota guardada · nadie tiene las notificaciones activas');
       }
     }
   }
@@ -87,12 +90,13 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
     <div className="modal-overlay" onClick={onCerrar}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>
+          <h2 className="modal-titulo">
             {esEdicion ? 'Editar evento' : 'Nuevo evento'}
-            {esOrigenMoodle && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: 6 }}>(sincronizado con Moodle)</span>}
+            {esOrigenMoodle && <span className="modal-subtitulo">sincronizado con Moodle</span>}
           </h2>
-          <button className="btn-icon" onClick={onCerrar}>✕</button>
+          <button className="btn-icon" onClick={onCerrar} aria-label="Cerrar"><X size={16} /></button>
         </div>
+
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <label>Título</label>
@@ -132,32 +136,14 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
               placeholder="https://moodle.../practica3" />
 
             {esOrigenMoodle && evento.moodle_url && (
-              <div style={{ marginTop: '0.75rem' }}>
-                <a href={evento.moodle_url} target="_blank" rel="noreferrer"
-                  className="btn btn-filled" style={{ display: 'block', textAlign: 'center', textDecoration: 'none' }}>
-                  🎓 Abrir el curso en Moodle
-                </a>
-              </div>
+              <a href={evento.moodle_url} target="_blank" rel="noreferrer" className="btn-moodle">
+                <GraduationCap size={15} /> Abrir el curso en Moodle
+              </a>
             )}
 
             <label>Descripción / apuntes</label>
             {esOrigenMoodle && descripcion ? (
-              <div style={{
-                whiteSpace: 'pre-wrap',
-                overflowWrap: 'anywhere',
-                wordBreak: 'break-word',
-                background: 'var(--bg)',
-                border: '1px solid var(--border)',
-                borderRadius: 6,
-                padding: '0.75rem',
-                fontSize: '0.8125rem',
-                lineHeight: '1.5',
-                maxHeight: '16rem',
-                overflowY: 'auto',
-                wordBreak: 'break-word',
-              }}>
-                {descripcion}
-              </div>
+              <div className="descripcion-moodle">{descripcion}</div>
             ) : (
               <textarea value={descripcion} onChange={e => setDescripcion(e.target.value)}
                 placeholder="Lo que dijo el profesor, temas, enlaces, detalles..." />
@@ -165,7 +151,10 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
 
             {esEdicion && (
               <div className="notas-section">
-                <h3 style={{ fontSize: '0.875rem', marginBottom: '0.5rem' }}>💬 Notas del grupo ({notas.length})</h3>
+                <h3 className="notas-titulo">
+                  <MessageSquare size={13} /> Notas del grupo
+                  <span className="contador">{notas.length}</span>
+                </h3>
                 {notas.map(n => (
                   <div key={n.id} className="nota-item">
                     <div className="nota-autor">{n.usuarios?.nombre || 'Anónimo'}</div>
@@ -173,10 +162,12 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
                     <div className="nota-fecha">{format(parseISO(n.created_at), 'd MMM HH:mm', { locale: es })}</div>
                   </div>
                 ))}
-                <form onSubmit={guardarNota} style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                <form onSubmit={guardarNota} className="nota-form">
                   <input type="text" value={nuevaNota} onChange={e => setNuevaNota(e.target.value)}
-                    placeholder="Nota rápida para el grupo..." style={{ flex: 1 }} />
-                  <button type="submit" className="btn btn-filled" style={{ padding: '0.5rem 0.75rem' }}>+</button>
+                    placeholder="Nota rápida para el grupo..." />
+                  <button type="submit" className="btn btn-filled nota-enviar" aria-label="Añadir nota">
+                    <Plus size={15} />
+                  </button>
                 </form>
               </div>
             )}
@@ -184,10 +175,14 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
 
           <div className="modal-footer">
             {esEdicion && !esOrigenMoodle && (
-              <button type="button" className="btn btn-danger" onClick={() => onEliminar(evento.id)}>Eliminar</button>
+              <button type="button" className="btn btn-danger" onClick={() => onEliminar(evento.id)}>
+                <Trash2 size={14} /> Eliminar
+              </button>
             )}
             {esEdicion && (
-              <button type="button" className="btn" onClick={() => onDuplicar(evento.id)}>📋 Duplicar +1 día</button>
+              <button type="button" className="btn" onClick={() => onDuplicar(evento.id)}>
+                <Copy size={14} /> Duplicar +1 día
+              </button>
             )}
             <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
             <button type="submit" className="btn btn-filled" disabled={esOrigenMoodle}>

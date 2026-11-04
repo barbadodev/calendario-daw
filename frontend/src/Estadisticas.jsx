@@ -26,7 +26,7 @@ export default function Estadisticas({ usuario, eventos }) {
   return (
     <div className="eventos-lista">
       <div className="ajustes-card">
-        <h3>📊 Resumen general</h3>
+        <h3>Resumen general</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.75rem', marginTop: '0.75rem' }}>
           <StatBox label="Total" value={stats.total} color="#6366f1" />
           <StatBox label="Próximos 7d" value={stats.proximos7} color="#f97316" />
@@ -55,9 +55,9 @@ export default function Estadisticas({ usuario, eventos }) {
 
 function StatBox({ label, value, color }) {
   return (
-    <div style={{ background: color + '22', padding: '0.75rem', borderRadius: 8, textAlign: 'center', border: `1px solid ${color}` }}>
-      <div style={{ fontSize: '1.5rem', fontWeight: 700, color }}>{value}</div>
-      <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{label}</div>
+    <div className="stat-caja" style={{ '--tinte': color }}>
+      <div className="stat-valor">{value}</div>
+      <div className="stat-etiqueta">{label}</div>
     </div>
   );
 }
@@ -69,7 +69,7 @@ function BarRow({ label, value, max, color }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: 2 }}>
         <span>{label}</span><span style={{ color: 'var(--text-muted)' }}>{value}</span>
       </div>
-      <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3, overflow: 'hidden' }}>
+      <div style={{ height: 6, background: 'var(--bg-refuerzo)', borderRadius: 3, overflow: 'hidden' }}>
         <div style={{ width: `${pct}%`, height: '100%', background: color, transition: 'width 0.3s' }} />
       </div>
     </div>

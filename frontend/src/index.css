@@ -1,14 +1,51 @@
-:root {
+@import "tailwindcss";
+
+/* ====== TOKENS DE TEMA ====== */
+:root,
+[data-tema="oscuro"] {
   --bg: #0f172a;
   --bg-surface: #1e293b;
   --bg-card: #334155;
+  --bg-refuerzo: #3f4f66;
   --text: #f1f5f9;
   --text-muted: #94a3b8;
   --primary: #6366f1;
   --primary-hover: #4f46e5;
+  --primary-suave: rgba(99, 102, 241, .16);
   --border: #475569;
-  --danger: #ef4444;
-  --success: #10b981;
+  --border-suave: rgba(148, 163, 184, .18);
+  --danger: #f87171;
+  --success: #34d399;
+  --success-suave: rgba(52, 211, 153, .16);
+  --aviso: #fbbf24;
+  --modal-fondo: rgba(2, 6, 23, .72);
+  --sombra: 0 6px 20px rgba(0, 0, 0, .45);
+  --sombra-suave: 0 1px 3px rgba(0, 0, 0, .3);
+  --vidro: rgba(30, 41, 59, .72);
+  --tinte-letra: var(--text);
+}
+
+[data-tema="claro"] {
+  --bg: #f8fafc;
+  --bg-surface: #ffffff;
+  --bg-card: #eef2f7;
+  --bg-refuerzo: #e2e8f0;
+  --text: #0f172a;
+  --text-muted: #64748b;
+  --primary: #4f46e5;
+  --primary-hover: #4338ca;
+  --primary-suave: rgba(79, 70, 229, .10);
+  --border: #cbd5e1;
+  --border-suave: rgba(100, 116, 139, .22);
+  --danger: #dc2626;
+  --success: #059669;
+  --success-suave: rgba(5, 150, 105, .12);
+  --aviso: #b45309;
+  --modal-fondo: rgba(15, 23, 42, .38);
+  --sombra: 0 6px 20px rgba(15, 23, 42, .12);
+  --sombra-suave: 0 1px 3px rgba(15, 23, 42, .08);
+  --vidro: rgba(255, 255, 255, .78);
+  --tinte-letra: var(--text);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -27,6 +64,12 @@ body {
   color: var(--text);
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
+  transition: background-color .25s ease, color .25s ease;
+}
+
+/* Superficies que acompañan el cambio de tema sin parpadeos bruscos */
+.ajustes-card, .evento-card, .modal-card, .view-tab, .filtro-chip, .toast {
+  transition: background-color .25s ease, border-color .25s ease, color .25s ease;
 }
 
 #root {
@@ -125,8 +168,10 @@ input, textarea, select {
 
 /* ====== HEADER ====== */
 .app-header {
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
+  background: var(--vidro);
+  backdrop-filter: blur(12px) saturate(1.4);
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  border-bottom: 1px solid var(--border-suave);
   padding: 0.75rem 1rem;
   display: flex;
   align-items: center;
@@ -182,6 +227,9 @@ input, textarea, select {
 }
 
 .filtro-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
   padding: 0.375rem 0.75rem;
   border-radius: 999px;
   font-size: 0.75rem;
@@ -391,7 +439,7 @@ input, textarea, select {
   font-size: 0.625rem;
   padding: 0.125rem 0.5rem;
   border-radius: 999px;
-  background: rgba(16, 185, 129, 0.15);
+  background: var(--success-suave);
   color: var(--success);
 }
 
@@ -415,7 +463,9 @@ input, textarea, select {
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.7);
+  background: var(--modal-fondo);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -425,9 +475,12 @@ input, textarea, select {
 }
 
 .modal-card {
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: var(--vidro);
+  backdrop-filter: blur(20px) saturate(1.5);
+  -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  border: 1px solid var(--border-suave);
+  border-radius: 14px;
+  box-shadow: var(--sombra);
   max-width: 500px;
   width: 100%;
   max-height: 90vh;
@@ -608,7 +661,7 @@ input, textarea, select {
   border: none;
   border-radius: 50%;
   font-size: 1.5rem;
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+  box-shadow: var(--sombra);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -908,7 +961,243 @@ input, textarea, select {
 
 @media (prefers-reduced-motion: reduce) {
   .modal-card { animation: none; }
+  .girando { animation: none; }
 }
+
+/* ============================================================
+   Componentes del rediseño (Tailwind + tokens de tema)
+   ============================================================ */
+
+/* --- Textos auxiliares --- */
+.ayuda {
+  @apply text-[0.8125rem] leading-relaxed text-[var(--text-muted)];
+}
+.vacio {
+  @apply text-center text-[var(--text-muted)] p-8;
+}
+.mensaje-estado {
+  @apply text-[0.8125rem] text-[var(--text-muted)] cursor-pointer mt-2;
+}
+.card-titulo {
+  @apply flex items-center gap-2 text-[0.9375rem] font-semibold mb-3;
+}
+.grupo-botones {
+  @apply flex gap-1.5 flex-wrap;
+}
+.estado-ok {
+  @apply inline-flex items-center gap-1 text-[0.875rem] text-[var(--success)];
+}
+
+/* --- Metadatos de evento --- */
+.meta-item {
+  @apply inline-flex items-center gap-1.5;
+}
+.meta-num {
+  @apply tabular-nums;
+}
+.meta-enlace {
+  @apply inline-flex items-center gap-1 no-underline hover:underline;
+  color: var(--primary);
+}
+.meta-enlace-curso {
+  color: var(--success);
+}
+.etiqueta-check {
+  @apply inline-flex items-center gap-1 text-[0.75rem] text-[var(--text-muted)] cursor-pointer;
+}
+.etiqueta-check input { width: auto; }
+
+/* --- Indicadores de estado --- */
+.punto {
+  @apply inline-block w-2 h-2 rounded-full shrink-0;
+}
+.punto-estado {
+  @apply inline-block w-2 h-2 rounded-full mr-2 align-middle;
+}
+.punto-estado.activo { background: var(--success); }
+.punto-estado.inactivo { background: var(--border); }
+.pulso {
+  @apply inline-block w-2.5 h-2.5 rounded-full shrink-0;
+}
+.pulso.alta { background: #ef4444; }
+.pulso.media { background: #eab308; }
+.pulso.baja { background: #10b981; }
+
+/* --- Chips y etiquetas --- */
+.chip-revisar {
+  @apply inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[0.625rem] font-semibold;
+  background: var(--primary-suave);
+  color: var(--aviso);
+}
+.grupo-hoy {
+  @apply inline-flex items-center gap-1 text-[var(--primary)] font-semibold;
+}
+
+/* --- Banners (Moodle caído, cierres) --- */
+.banner {
+  @apply flex flex-col gap-1 px-4 py-2.5 text-[0.8125rem];
+  border-left: 4px solid var(--border);
+}
+.banner-cabecera {
+  @apply flex items-center gap-2.5;
+}
+.banner-icono { @apply shrink-0; }
+.banner-titulo { @apply flex-1 text-[0.8125rem]; }
+.banner-accion {
+  @apply text-[0.75rem] px-1 py-0.5 bg-transparent border-none cursor-pointer;
+  color: var(--text-muted);
+}
+.banner-texto { @apply flex-1; }
+
+.banner-alerta {
+  @apply items-center;
+  border-left-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+  color: var(--danger);
+}
+
+.banner-cierre.critico  { border-left-color: #ef4444; background: color-mix(in srgb, #ef4444 14%, transparent); }
+.banner-cierre.urgente  { border-left-color: #f97316; background: color-mix(in srgb, #f97316 13%, transparent); }
+.banner-cierre.proximo  { border-left-color: #eab308; background: color-mix(in srgb, #eab308 11%, transparent); }
+.banner-cierre.critico .banner-icono { color: #ef4444; }
+.banner-cierre.urgente .banner-icono { color: #f97316; }
+.banner-cierre.proximo .banner-icono { color: var(--aviso); }
+
+.cierre-lista { @apply flex flex-col gap-1.5 mt-1; }
+.cierre-fila {
+  @apply flex items-center gap-2 pl-1 text-[0.78rem] min-w-0;
+}
+.cierre-chip {
+  @apply shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] font-semibold text-white;
+}
+.cierre-titulo {
+  @apply flex-1 min-w-0 overflow-hidden text-ellipsis whitespace-nowrap;
+}
+.cierre-horas {
+  @apply shrink-0 text-[0.7rem] font-bold tabular-nums;
+}
+.cierre-fila.critico .cierre-horas { color: #fca5a5; }
+.cierre-fila.urgente .cierre-horas { color: #fdba74; }
+.cierre-fila.proximo .cierre-horas { color: var(--text-muted); }
+.cierre-enlace {
+  @apply shrink-0 inline-flex no-underline;
+  color: var(--text-muted);
+}
+.cierre-check {
+  @apply shrink-0 inline-flex items-center justify-center w-6 h-6 rounded cursor-pointer;
+  border: 1px solid var(--border);
+  color: var(--success);
+  background: transparent;
+}
+.cierre-check:hover { background: var(--primary-suave); }
+
+/* --- Modal --- */
+.modal-titulo { @apply flex flex-wrap items-baseline gap-2 text-[1rem]; }
+.modal-subtitulo {
+  @apply text-[0.7rem] font-normal;
+  color: var(--text-muted);
+}
+.btn-moodle {
+  @apply flex items-center justify-center gap-2 mt-3 py-2.5 rounded-lg font-medium no-underline text-white;
+  background: var(--primary);
+}
+.btn-moodle:hover { background: var(--primary-hover); }
+.descripcion-moodle {
+  @apply text-[0.8125rem] leading-relaxed p-3 rounded-md;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+}
+.notas-titulo {
+  @apply flex items-center gap-1.5 text-[0.875rem] font-semibold mb-2;
+}
+.contador {
+  @apply inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full text-[0.65rem] font-bold;
+  background: var(--bg-card);
+  color: var(--text-muted);
+}
+.nota-form { @apply flex gap-2 mt-2; }
+.nota-form input { flex: 1; }
+.nota-enviar { @apply flex items-center justify-center px-3; }
+
+/* --- Selector de tema --- */
+.selector-tema { @apply flex gap-1.5 flex-wrap; }
+.opcion-tema {
+  @apply inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[0.8125rem] font-medium cursor-pointer;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+}
+.opcion-tema:hover { border-color: var(--primary); color: var(--text); }
+.opcion-tema.activo {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+}
+
+/* --- URL y resumen --- */
+.bloque-url { @apply flex flex-col gap-2 p-3 rounded-md; background: var(--bg); border: 1px solid var(--border); }
+.bloque-url code { @apply text-[0.7rem] break-all; }
+.bloque-url .btn { @apply self-start; }
+.resumen-bloque { @apply mt-3 flex flex-col gap-1.5; }
+.resumen-texto {
+  @apply w-full p-2.5 rounded-md text-[0.75rem];
+  min-height: 11rem;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  font-family: ui-monospace, monospace;
+  white-space: pre-wrap;
+}
+
+/* --- Semana de exámenes --- */
+.fila-fecha-examen { @apply flex gap-2 items-center flex-wrap; }
+.fila-fecha-examen label { @apply text-[0.75rem] m-0; color: var(--text-muted); }
+.fila-fecha-examen input { @apply w-auto px-2 py-1.5 rounded; background: var(--bg); border: 1px solid var(--border); color: var(--text); }
+
+/* --- Plan de estudio --- */
+.semana-bloque { border-left-width: 4px; border-left-style: solid; border-left-color: transparent; }
+.semana-bloque.alta  { border-left-color: #ef4444; }
+.semana-bloque.media { border-left-color: #eab308; }
+.semana-bloque.baja  { border-left-color: #10b981; }
+.semana-cabecera { @apply flex items-center gap-2 mb-1.5; }
+.semana-titulo { @apply text-[0.9375rem] font-semibold; }
+.semana-cifras { @apply ml-auto flex items-center gap-3 text-[0.8125rem]; color: var(--text-muted); }
+.barra-carga { @apply h-1.5 rounded-full overflow-hidden mb-2.5; background: var(--bg); }
+.barra-relleno { @apply h-full transition-[width] duration-300; }
+.barra-relleno.alta  { background: #ef4444; }
+.barra-relleno.media { background: #eab308; }
+.barra-relleno.baja  { background: #10b981; }
+.linea-evento { @apply flex items-center gap-2 py-0.5 text-[0.8125rem] min-w-0; }
+.linea-evento.hecho { @apply opacity-50; }
+.linea-evento.hecho .linea-titulo { text-decoration: line-through; }
+.linea-fecha { @apply text-[0.7rem] shrink-0 tabular-nums; color: var(--text-muted); min-width: 3.5rem; }
+.linea-modulo { @apply text-[0.7rem] font-semibold shrink-0; min-width: 2.75rem; }
+.linea-titulo { @apply truncate; }
+
+/* --- Estadísticas --- */
+.stat-caja {
+  background: var(--bg-card);
+  background: color-mix(in srgb, var(--tinte) 12%, var(--bg-surface));
+  border-top: 2px solid var(--tinte);
+  @apply p-3 rounded-lg text-center;
+}
+.stat-valor { @apply text-2xl font-bold; color: var(--text); }
+.stat-etiqueta {
+  @apply text-[0.7rem] uppercase mt-0.5;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+/* --- Notas por módulo --- */
+.nota-meta { @apply text-[0.6875rem]; color: var(--text-muted); }
+.nota-nombre { color: var(--primary); font-weight: 600; }
+.girando { animation: girar 1s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
 
 /* ====== TOAST de confirmación en pantalla ====== */
 /* Va arriba para no tapar el botón + ni el contenido al hacer scroll */
@@ -919,6 +1208,9 @@ input, textarea, select {
   top: 4.25rem;
   z-index: 200;
   max-width: min(92vw, 26rem);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.7rem 1rem;
   border-radius: 10px;
   font-size: 0.8125rem;
@@ -926,7 +1218,7 @@ input, textarea, select {
   color: var(--text);
   background: var(--bg-card);
   border: 1px solid var(--border);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, .45);
+  box-shadow: var(--sombra);
   cursor: pointer;
   animation: toast-entra .18s ease-out;
 }

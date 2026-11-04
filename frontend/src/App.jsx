@@ -12,6 +12,8 @@ import ContadorProximo from './ContadorProximo.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
 import AlertaCierres from './AlertaCierres.jsx';
 import { supabase } from './supabase.js';
+import { setTema, temaActual, temaPreferido } from './tema.js';
+import { CalendarDays, LogOut, Settings, Sun, Moon, Plus, Check, TriangleAlert } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -41,6 +43,13 @@ export default function App() {
   const [fechaNueva, setFechaNueva] = useState(null);
   const [eventoDestacado, setEventoDestacado] = useState(null);
   const [aviso, setAviso] = useState(null);
+  const [tema, setTemaEstado] = useState(() => temaActual());
+
+  function alternarTema() {
+    const siguiente = tema === 'oscuro' ? 'claro' : 'oscuro';
+    setTema(siguiente);
+    setTemaEstado(siguiente);
+  }
 
   function mostrarAviso(texto, tipo = 'ok') {
     setAviso({ texto, tipo });
@@ -88,7 +97,7 @@ export default function App() {
     if (d.avisados === undefined) return '';
     return d.avisados > 0
       ? ` · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
-      : ' · ⚠️ nadie tiene las notificaciones activas';
+      : ' · nadie tiene las notificaciones activas';
   }
 
   async function crearEvento(eventoData) {
@@ -101,8 +110,8 @@ export default function App() {
       const d = await res.json();
       setModalAbierto(false);
       cargarEventos();
-      mostrarAviso('📅 Evento guardado' + textoAvisos(d));
-    } else mostrarAviso('❌ No se pudo guardar', 'error');
+      mostrarAviso('Evento guardado' + textoAvisos(d));
+    } else mostrarAviso('No se pudo guardar', 'error');
   }
 
   async function actualizarEvento(id, eventoData) {
@@ -114,8 +123,8 @@ export default function App() {
     if (res.ok) {
       const d = await res.json();
       setModalAbierto(false); setEventoSeleccionado(null); cargarEventos();
-      mostrarAviso('✅ Cambios guardados' + textoAvisos(d));
-    } else mostrarAviso('❌ No se pudieron guardar los cambios', 'error');
+      mostrarAviso('Cambios guardados' + textoAvisos(d));
+    } else mostrarAviso('No se pudieron guardar los cambios', 'error');
   }
 
   async function eliminarEvento(id) {
@@ -128,7 +137,7 @@ export default function App() {
     if (res.ok) {
       const d = await res.json();
       setModalAbierto(false); setEventoSeleccionado(null); cargarEventos();
-      mostrarAviso('🗑️ Evento eliminado' + textoAvisos(d));
+      mostrarAviso('Evento eliminado' + textoAvisos(d));
     }
   }
 
@@ -145,14 +154,14 @@ export default function App() {
     const ev = eventos.find(e => e.id === id);
     if (!ev || ev.completado) return;
     await toggleCompletar(id, ev.completado);
-    mostrarAviso(`✅ ${ev.titulo.slice(0, 40)} · marcada como entregada`);
+    mostrarAviso(`${ev.titulo.slice(0, 40)} · marcada como entregada`);
     // Avisa al grupo de que ya la has subido
     fetch(`${API_URL}/api/eventos/${id}/notas`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         sala: usuario.codigo_sala,
-        contenido: 'Entregada ✅',
+        contenido: 'Entregada',
         autor_id: usuario.id,
       }),
     });
@@ -183,10 +192,18 @@ export default function App() {
   return (
     <>
       <header className="app-header">
-        <h1>📅 CalDAW <span className="user-badge">{usuario.nombre}</span></h1>
+        <h1><CalendarDays size={18} /> CalDAW <span className="user-badge">{usuario.nombre}</span></h1>
         <div className="header-actions">
-          <button className="btn-icon" onClick={cerrarSesion} title="Cerrar sesión">🚪</button>
-          <button className="btn-icon" onClick={() => setVista('ajustes')} title="Ajustes">⚙️</button>
+          <button className="btn-icon" onClick={alternarTema}
+            title={tema === 'oscuro' ? 'Poner modo claro' : 'Poner modo oscuro'}>
+            {tema === 'oscuro' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+          <button className="btn-icon" onClick={() => setVista('ajustes')} title="Ajustes">
+            <Settings size={16} />
+          </button>
+          <button className="btn-icon" onClick={cerrarSesion} title="Cerrar sesión">
+            <LogOut size={16} />
+          </button>
         </div>
       </header>
 
@@ -210,8 +227,8 @@ export default function App() {
             onClick={() => setFiltroModulo(m.id)}>{m.nombre}</button>
         ))}
         <button className={`filtro-chip ${soloPendientes ? 'active' : ''}`}
-          style={soloPendientes ? { background: '#10b981', borderColor: '#10b981' } : {}}
-          onClick={() => setSoloPendientes(v => !v)}>✓ Pendientes</button>
+          style={soloPendientes ? { background: 'var(--success)', borderColor: 'var(--success)' } : {}}
+          onClick={() => setSoloPendientes(v => !v)}><Check size={11} strokeWidth={3} /> Pendientes</button>
       </div>
 
       {vista === 'mes' && <Calendario eventos={eventosVista} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
@@ -223,7 +240,9 @@ export default function App() {
       {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
 
       {['mes','semana','lista'].includes(vista) && (
-        <button className="fab" onClick={() => abrirModalCrear()}>+</button>
+        <button className="fab" onClick={() => abrirModalCrear()} title="Nuevo evento">
+          <Plus size={22} strokeWidth={2.4} />
+        </button>
       )}
 
       {modalAbierto && (
@@ -241,8 +260,9 @@ export default function App() {
       )}
 
       {aviso && (
-        <div className={`toast toast-${aviso.tipo}`} onClick={() => setAviso(null)}>
-          {aviso.texto}
+        <div className={`toast toast-${aviso.tipo}`} onClick={() => setAviso(null)} role="status">
+          {aviso.tipo === 'error' ? <TriangleAlert size={15} /> : <Check size={15} strokeWidth={2.6} />}
+          <span>{aviso.texto}</span>
         </div>
       )}
     </>

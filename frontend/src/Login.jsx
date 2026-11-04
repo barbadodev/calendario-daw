@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { CalendarDays } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
 
@@ -39,7 +40,7 @@ function Login({ onLogin }) {
   return (
     <div className="login-container">
       <div className="login-card">
-        <h1>📅 Calendario DAW 2º</h1>
+        <h1><CalendarDays size={22} /> Calendario DAW 2º</h1>
         <p>Acceso para los 3 compañeros de clase</p>
 
         <form onSubmit={handleSubmit}>

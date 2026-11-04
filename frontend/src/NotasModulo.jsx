@@ -47,7 +47,7 @@ export default function NotasModulo({ usuario }) {
       </div>
 
       <div className="ajustes-card" style={{ borderLeft: `4px solid ${mod.color}` }}>
-        <h3>💬 Notas de {mod.nombre}</h3>
+        <h3>Notas de {mod.nombre}</h3>
         <form onSubmit={crearNota} style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
           <input type="text" value={nuevo} onChange={e => setNuevo(e.target.value)}
             placeholder="Nuevo apunte, recordatorio, duda..."
@@ -60,7 +60,7 @@ export default function NotasModulo({ usuario }) {
             {notas.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Aún no hay notas en este módulo.</p> :
               notas.map(n => (
                 <div key={n.id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '0.5rem 0.75rem', borderRadius: 6, marginBottom: 6 }}>
-                  <div style={{ fontSize: '0.6875rem', color: mod.color, fontWeight: 600 }}>{n.usuarios?.nombre || 'Anónimo'} · {new Date(n.created_at).toLocaleString('es-ES')}</div>
+                  <div className="nota-meta"><span className="nota-nombre">{n.usuarios?.nombre || 'Anónimo'}</span> · {new Date(n.created_at).toLocaleString('es-ES')}</div>
                   <div style={{ fontSize: '0.875rem', marginTop: 2, whiteSpace: 'pre-wrap' }}>{n.contenido}</div>
                 </div>
               ))}

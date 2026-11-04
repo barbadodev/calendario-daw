@@ -3,6 +3,7 @@ import { startOfWeek, addDays, format, isToday, parseISO, addWeeks, subWeeks } f
 import { es } from 'date-fns/locale';
 import { getModulo } from './App.jsx';
 import useEsMovil from './useEsMovil.js';
+import { CalendarDays } from 'lucide-react';
 
 export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
   const [inicio, setInicio] = useState(startOfWeek(new Date(), { weekStartsOn: 1 }));
@@ -54,7 +55,7 @@ export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
                   <button key={ev.id} className={`agenda-evento ${ev.completado ? 'hecho' : ''}`} onClick={() => onEventoClick(ev)}>
                     <span className="agenda-evento-color" style={{ background: mod.color }} />
                     <span className="agenda-evento-hora">
-                      {ev.todo_el_dia ? '🗓' : format(parseISO(ev.fecha_inicio), 'HH:mm')}
+                      {ev.todo_el_dia ? <CalendarDays size={12} /> : format(parseISO(ev.fecha_inicio), 'HH:mm')}
                     </span>
                     <span className="agenda-evento-titulo">{ev.titulo}</span>
                     <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>

@@ -10,10 +10,10 @@ export const MODULOS = [
 ];
 
 export const TIPOS = [
-  { id: 'examen',  nombre: '📝 Examen' },
-  { id: 'entrega', nombre: '📦 Entrega' },
-  { id: 'apunte',  nombre: '📝 Apunte / Nota del profesor' },
-  { id: 'clase',   nombre: '📚 Clase' },
-  { id: 'reunion', nombre: '👥 Reunión de grupo' },
-  { id: 'otro',    nombre: '⭐ Otro' },
+  { id: 'examen',  nombre: 'Examen' },
+  { id: 'entrega', nombre: 'Entrega' },
+  { id: 'apunte',  nombre: 'Apunte / nota del profesor' },
+  { id: 'clase',   nombre: 'Clase' },
+  { id: 'reunion', nombre: 'Reunión de grupo' },
+  { id: 'otro',    nombre: 'Otro' },
 ];

@@ -1,7 +1,18 @@
 import { useState, useEffect } from 'react';
 import SemanaExamenes from './SemanaExamenes.jsx';
+import { setModo, modoActual } from './tema.js';
+import {
+  Users, Bell, Monitor, Sun, Moon, GraduationCap, RefreshCw, CalendarRange,
+  Link, Copy, Share2, Download, Info, Check,
+} from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
+
+const OPCIONES_TEMA = [
+  { id: 'sistema', nombre: 'Sistema', Icono: Monitor },
+  { id: 'claro', nombre: 'Claro', Icono: Sun },
+  { id: 'oscuro', nombre: 'Oscuro', Icono: Moon },
+];
 
 export default function Ajustes({ usuario, eventos }) {
   const [usuarios, setUsuarios] = useState([]);
@@ -10,18 +21,24 @@ export default function Ajustes({ usuario, eventos }) {
   const [sincronizando, setSincronizando] = useState(false);
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
   const [resumen, setResumen] = useState('');
+  const [modo, setModoEstado] = useState(() => modoActual());
 
   useEffect(() => {
     cargarUsuarios();
-    if ('Notification' in window) {
-      setNotifActiva(Notification.permission === 'granted');
-    }
+    if ('Notification' in window) setNotifActiva(Notification.permission === 'granted');
   }, []);
 
   async function cargarUsuarios() {
-    const res = await fetch(`${API_URL}/api/auth/usuarios?sala=${usuario.codigo_sala}`);
-    const data = await res.json();
-    if (data.usuarios) setUsuarios(data.usuarios);
+    try {
+      const res = await fetch(`${API_URL}/api/auth/usuarios?sala=${usuario.codigo_sala}`);
+      const data = await res.json();
+      if (data.usuarios) setUsuarios(data.usuarios);
+    } catch { setUsuarios([]); }
+  }
+
+  function elegirTema(id) {
+    setModo(id);
+    setModoEstado(id);
   }
 
   async function activarNotificaciones() {
@@ -31,8 +48,7 @@ export default function Ajustes({ usuario, eventos }) {
       if (perm !== 'granted') return setMensaje('Permiso denegado');
 
       const reg = await navigator.serviceWorker.ready;
-      const pubKeyRes = await fetch(`${API_URL}/api/push/vapid-public-key`);
-      const { publicKey } = await pubKeyRes.json();
+      const { publicKey } = await (await fetch(`${API_URL}/api/push/vapid-public-key`)).json();
 
       // Si había una suscripción previa (p. ej. con otra clave VAPID), se limpia primero
       let sub = await reg.pushManager.getSubscription();
@@ -47,7 +63,6 @@ export default function Ajustes({ usuario, eventos }) {
           applicationServerKey: urlBase64ToUint8Array(publicKey),
         });
       } catch (err) {
-        // Reintento una vez si el navegador se quejó de la clave
         const msg = String(err.message || '').toLowerCase();
         if (msg.includes('match') || msg.includes('invalid')) {
           try {
@@ -59,45 +74,42 @@ export default function Ajustes({ usuario, eventos }) {
             userVisibleOnly: true,
             applicationServerKey: urlBase64ToUint8Array(publicKey),
           });
-        } else {
-          throw err;
-        }
+        } else throw err;
       }
 
       const res = await fetch(`${API_URL}/api/push/suscribir`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          sala: usuario.codigo_sala,
-          usuarioId: usuario.id,
-          suscripcion: sub.toJSON(),
-        }),
+        body: JSON.stringify({ sala: usuario.codigo_sala, usuarioId: usuario.id, suscripcion: sub.toJSON() }),
       });
       if (res.ok) {
         setNotifActiva(true);
-        setMensaje('✅ Notificaciones activadas');
+        setMensaje('Notificaciones activadas');
       } else {
         const err = await res.json();
-        setMensaje('❌ ' + (err.error || 'Error al registrar la suscripción'));
+        setMensaje(err.error || 'Error al registrar la suscripción');
       }
     } catch (err) {
       console.error('Error activando notificaciones:', err);
-      setMensaje('❌ ' + (err.message || 'No se pudo activar'));
+      setMensaje(err.message || 'No se pudo activar');
     }
   }
 
   async function sincronizarAhora() {
     setSincronizando(true);
-    setMensaje('🔄 Forzando sincronización con Moodle...');
-    const res = await fetch(`${API_URL}/api/sync/now`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala }),
-    });
-    if (res.ok) setMensaje('✅ Sincronización completada. Recarga si no ves los cambios.');
-    else setMensaje('❌ Error sincronizando');
+    setMensaje('Forzando sincronización con Moodle…');
+    try {
+      const res = await fetch(`${API_URL}/api/sync/now`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala }),
+      });
+      setMensaje(res.ok ? 'Sincronización completada' : 'Error sincronizando');
+    } catch {
+      setMensaje('Error sincronizando');
+    }
     setSincronizando(false);
-    setTimeout(() => window.location.reload(), 2000);
+    setTimeout(() => window.location.reload(), 1500);
   }
 
   async function generarResumen(dias) {
@@ -106,8 +118,12 @@ export default function Ajustes({ usuario, eventos }) {
       const data = await res.json();
       setResumen(data.texto || 'Sin eventos');
     } catch {
-      setMensaje('❌ No se pudo generar el resumen');
+      setMensaje('No se pudo generar el resumen');
     }
+  }
+
+  function copiar(texto, aviso) {
+    navigator.clipboard.writeText(texto).then(() => setMensaje(aviso));
   }
 
   function urlBase64ToUint8Array(base64) {
@@ -122,12 +138,15 @@ export default function Ajustes({ usuario, eventos }) {
   return (
     <div className="ajustes-container">
       <div className="ajustes-card">
-        <h3>👥 Miembros del grupo</h3>
+        <h3 className="card-titulo"><Users size={15} /> Miembros del grupo</h3>
         {usuarios.length === 0
-          ? <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Solo estás tú por ahora.</p>
+          ? <p className="ayuda">Solo estás tú por ahora.</p>
           : usuarios.map(u => (
             <div key={u.id} className="ajustes-item">
-              <span className="ajustes-item-label">{u.id === usuario.id ? `🟢 ${u.nombre} (tú)` : `⚪ ${u.nombre}`}</span>
+              <span className="ajustes-item-label">
+                <span className={`punto-estado ${u.id === usuario.id ? 'activo' : 'inactivo'}`} />
+                {u.nombre}{u.id === usuario.id ? ' (tú)' : ''}
+              </span>
               <span className="ajustes-item-valor">
                 {u.last_seen ? new Date(u.last_seen).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}
               </span>
@@ -137,91 +156,99 @@ export default function Ajustes({ usuario, eventos }) {
       </div>
 
       <div className="ajustes-card">
-        <h3>🔔 Notificaciones</h3>
-        <div className="ajustes-item">
-          <span className="ajustes-item-label">Avisos en este dispositivo</span>
-          {notifActiva
-            ? <span style={{ color: 'var(--success)', fontSize: '0.875rem' }}>✅ Activadas</span>
-            : <button className="btn btn-filled" onClick={activarNotificaciones}>Activar</button>
-          }
+        <h3 className="card-titulo"><Monitor size={15} /> Apariencia</h3>
+        <div className="selector-tema">
+          {OPCIONES_TEMA.map(({ id, nombre, Icono }) => (
+            <button key={id}
+              className={`opcion-tema ${modo === id ? 'activo' : ''}`}
+              onClick={() => elegirTema(id)}>
+              <Icono size={15} /> {nombre}
+            </button>
+          ))}
         </div>
-        {mensaje && <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginTop: 4 }}>{mensaje}</p>}
-        <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 8, fontStyle: 'italic' }}>
-          💡 En iPhone hay que abrirla desde el icono de pantalla de inicio (Safari → Compartir → Añadir a pantalla de inicio), no desde Safari.
+        <p className="ayuda">
+          {modo === 'sistema'
+            ? 'La app sigue el modo claro/oscuro que tenga tu móvil o navegador.'
+            : `Fijado en modo ${modo}.`}
         </p>
       </div>
 
       <div className="ajustes-card">
-        <h3>🎓 Sincronización Moodle</h3>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-          Moodle se sincroniza solo cada 15 minutos. Aquí puedes forzar una actualización al instante.
+        <h3 className="card-titulo"><Bell size={15} /> Notificaciones</h3>
+        <div className="ajustes-item">
+          <span className="ajustes-item-label">Avisos en este dispositivo</span>
+          {notifActiva
+            ? <span className="estado-ok"><Check size={13} strokeWidth={3} /> Activadas</span>
+            : <button className="btn btn-filled" onClick={activarNotificaciones}>Activar</button>
+          }
+        </div>
+        <p className="ayuda">
+          En iPhone hay que abrirla desde el icono de pantalla de inicio (Safari → Compartir → Añadir a pantalla de inicio), no desde Safari.
         </p>
+      </div>
+
+      <div className="ajustes-card">
+        <h3 className="card-titulo"><GraduationCap size={15} /> Sincronización Moodle</h3>
+        <p className="ayuda">Moodle se sincroniza solo cada 15 minutos. Puedes forzar una actualización al instante.</p>
         <button className="btn btn-filled" onClick={sincronizarAhora} disabled={sincronizando} style={{ marginTop: '0.75rem' }}>
-          {sincronizando ? '⏳ Sincronizando...' : '🔄 Sincronizar ahora'}
+          <RefreshCw size={14} className={sincronizando ? 'girando' : ''} />
+          {sincronizando ? 'Sincronizando…' : 'Sincronizar ahora'}
         </button>
       </div>
 
       <SemanaExamenes usuario={usuario} />
 
       <div className="ajustes-card">
-        <h3>📆 Exportar a Google/Apple Calendar</h3>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
-          Pega esta URL en Google Calendar → "Otros calendarios" → "Desde URL" (en iPhone: Ajustes → Calendarios → Cuentas → Calendario de suscripción).
+        <h3 className="card-titulo"><CalendarRange size={15} /> Exportar a Google/Apple Calendar</h3>
+        <p className="ayuda">
+          Google Calendar → “Otros calendarios” → “Desde URL”.
+          iPhone: Ajustes → Calendarios → Cuentas → Calendario de suscripción.
         </p>
         {!mostrarIcsUrl ? (
-          <button className="btn" onClick={() => setMostrarIcsUrl(true)}>🔗 Mostrar URL</button>
+          <button className="btn" onClick={() => setMostrarIcsUrl(true)}><Link size={14} /> Mostrar URL</button>
         ) : (
-          <div style={{ background: 'var(--bg)', padding: '0.75rem', borderRadius: 6, fontSize: '0.7rem', wordBreak: 'break-all' }}>
-            {icsUrl}
-            <button className="btn" onClick={() => navigator.clipboard.writeText(icsUrl).then(() => alert('Copiado ✅'))}
-              style={{ display: 'block', marginTop: '0.5rem', padding: '0.3rem 0.6rem', fontSize: '0.75rem' }}>
-              Copiar
+          <div className="bloque-url">
+            <code>{icsUrl}</code>
+            <button className="btn" onClick={() => copiar(icsUrl, 'URL copiada')}>
+              <Copy size={14} /> Copiar
             </button>
           </div>
         )}
       </div>
 
       <div className="ajustes-card">
-        <h3>📤 Compartir con el grupo</h3>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
-          Genera un resumen en texto de vuestros próximos días, listo para pegar en el WhatsApp de clase.
-        </p>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <button className="btn" onClick={() => generarResumen(3)}>Próximos 3 días</button>
+        <h3 className="card-titulo"><Share2 size={15} /> Compartir con el grupo</h3>
+        <p className="ayuda">Resumen en texto de los próximos días, listo para pegar en el WhatsApp de clase.</p>
+        <div className="grupo-botones">
+          <button className="btn" onClick={() => generarResumen(3)}>3 días</button>
           <button className="btn" onClick={() => generarResumen(7)}>Semana</button>
           <button className="btn" onClick={() => generarResumen(14)}>2 semanas</button>
         </div>
         {resumen && (
-          <div style={{ marginTop: '0.75rem' }}>
-            <textarea
-              readOnly value={resumen}
-              onFocus={e => e.target.select()}
-              style={{
-                width: '100%', minHeight: '11rem', background: 'var(--bg)', color: 'var(--text)',
-                border: '1px solid var(--border)', borderRadius: 6, padding: '0.7rem',
-                fontSize: '0.75rem', fontFamily: 'ui-monospace, monospace', whiteSpace: 'pre-wrap',
-              }}
-            />
-            <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
-              <button className="btn btn-filled" onClick={() => navigator.clipboard.writeText(resumen).then(() => setMensaje('✅ Resumen copiado'))}>Copiar</button>
-              <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(resumen)}`} target="_blank" rel="noreferrer"
-                style={{ textDecoration: 'none', textAlign: 'center' }}>Abrir en WhatsApp</a>
+          <div className="resumen-bloque">
+            <textarea readOnly value={resumen} onFocus={e => e.target.select()} className="resumen-texto" />
+            <div className="grupo-botones">
+              <button className="btn btn-filled" onClick={() => copiar(resumen, 'Resumen copiado')}>Copiar</button>
+              <a className="btn" href={`https://wa.me/?text=${encodeURIComponent(resumen)}`} target="_blank" rel="noreferrer">
+                Abrir en WhatsApp
+              </a>
             </div>
           </div>
         )}
       </div>
 
       <div className="ajustes-card">
-        <h3>💾 Copia de seguridad</h3>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
-          Descarga un JSON con todos los eventos, notas y configuración. Útil por si se rompe algo o queréis guardar el curso.
+        <h3 className="card-titulo"><Download size={15} /> Copia de seguridad</h3>
+        <p className="ayuda">
+          JSON con todos los eventos, notas y configuración. Útil por si se rompe algo o queréis guardar el curso.
         </p>
-        <a className="btn" href={`${API_URL}/api/backup?sala=${usuario.codigo_sala}`} download
-          style={{ textDecoration: 'none', display: 'inline-block' }}>⬇️ Descargar backup</a>
+        <a className="btn" href={`${API_URL}/api/backup?sala=${usuario.codigo_sala}`} download>
+          <Download size={14} /> Descargar backup
+        </a>
       </div>
 
       <div className="ajustes-card">
-        <h3>ℹ️ Info</h3>
+        <h3 className="card-titulo"><Info size={15} /> Información</h3>
         <div className="ajustes-item">
           <span className="ajustes-item-label">Código de sala</span>
           <span className="ajustes-item-valor">{usuario.codigo_sala}</span>
@@ -232,9 +259,11 @@ export default function Ajustes({ usuario, eventos }) {
         </div>
         <div className="ajustes-item">
           <span className="ajustes-item-label">Versión</span>
-          <span className="ajustes-item-valor">1.3.1</span>
+          <span className="ajustes-item-valor">2.0.0</span>
         </div>
       </div>
+
+      {mensaje && <p className="mensaje-estado" onClick={() => setMensaje('')}>{mensaje}</p>}
     </div>
   );
 }

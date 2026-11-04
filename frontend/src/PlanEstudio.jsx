@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ClipboardList, Package } from 'lucide-react';
 
 const API = import.meta.env.VITE_API_URL;
 const NOMBRES = { ipe: 'IPE', dwec: 'DWEC', dwes: 'DWES', daw: 'DAW', diw: 'DIW', en: 'Inglés', opt: 'Optativa', proy: 'Proyecto', otro: 'Otro' };
@@ -16,41 +17,44 @@ export default function PlanEstudio({ usuario }) {
   }, []);
 
   if (!semanas) return <div className="eventos-lista">Calculando carga de trabajo…</div>;
-  if (semanas.length === 0) return <div className="eventos-lista"><p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No tienes nada pendiente 🎉</p></div>;
+  if (semanas.length === 0) {
+    return <div className="eventos-lista"><p className="vacio">No tienes nada pendiente</p></div>;
+  }
 
   const maxCarga = Math.max(...semanas.map(s => s.cargaHorasEstimadas), 1);
 
   return (
     <div className="eventos-lista">
       <div className="ajustes-card">
-        <h3>📚 Plan de estudio</h3>
-        <p style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
+        <h3>Plan de estudio</h3>
+        <p className="ayuda">
           Horas estimadas por semana (examen ≈ 6 h, entrega ≈ 4 h). Sirve para ver dónde apretar antes de llegar tarde.
         </p>
       </div>
 
       {semanas.map(s => {
-        const nivel = s.cargaHorasEstimadas >= 12 ? '🔴' : s.cargaHorasEstimadas >= 6 ? '🟡' : '🟢';
+        const nivel = s.cargaHorasEstimadas >= 12 ? 'alta' : s.cargaHorasEstimadas >= 6 ? 'media' : 'baja';
         const pct = Math.round((s.cargaHorasEstimadas / maxCarga) * 100);
         return (
-          <div key={s.semana} className="ajustes-card">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 6 }}>
-              <strong style={{ fontSize: '0.9375rem' }}>{nivel} {s.semana}</strong>
-              <span style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}>
-                {s.examenes} 📝 · {s.entregas} 📦 · {s.cargaHorasEstimadas} h
+          <div key={s.semana} className={`ajustes-card semana-bloque ${nivel}`}>
+            <div className="semana-cabecera">
+              <span className={`pulso ${nivel}`} aria-hidden="true" />
+              <strong className="semana-titulo">{s.semana}</strong>
+              <span className="semana-cifras">
+                <span className="meta-item"><ClipboardList size={12} /> {s.examenes}</span>
+                <span className="meta-item"><Package size={12} /> {s.entregas}</span>
+                <span className="meta-num">{s.cargaHorasEstimadas} h</span>
               </span>
             </div>
-            <div style={{ height: 6, background: 'var(--bg)', borderRadius: 3, overflow: 'hidden', marginBottom: 10 }}>
-              <div style={{ width: `${pct}%`, height: '100%', background: s.cargaHorasEstimadas >= 12 ? '#ef4444' : s.cargaHorasEstimadas >= 6 ? '#eab308' : '#10b981' }} />
-            </div>
+
+            <div className="barra-carga"><div className={`barra-relleno ${nivel}`} style={{ width: `${pct}%` }} /></div>
+
             {s.eventos.map(e => (
-              <div key={e.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: '0.8125rem', padding: '3px 0', opacity: e.completado ? 0.5 : 1 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: COLOR[e.modulo] || COLOR.otro, flexShrink: 0 }} />
-                <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', minWidth: 62 }}>
-                  {new Date(e.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-                </span>
-                <span style={{ color: COLOR[e.modulo], fontWeight: 600, fontSize: '0.7rem', minWidth: 42 }}>{NOMBRES[e.modulo] || e.modulo}</span>
-                <span style={{ textDecoration: e.completado ? 'line-through' : 'none' }}>{e.titulo}</span>
+              <div key={e.id} className={`linea-evento ${e.completado ? 'hecho' : ''}`}>
+                <span className="punto" style={{ background: COLOR[e.modulo] || COLOR.otro }} />
+                <span className="linea-fecha">{new Date(e.fecha).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                <span className="linea-modulo" style={{ color: COLOR[e.modulo] || COLOR.otro }}>{NOMBRES[e.modulo] || e.modulo}</span>
+                <span className="linea-titulo">{e.titulo}</span>
               </div>
             ))}
           </div>

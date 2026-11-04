@@ -3,6 +3,7 @@ import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, isSameMo
 import { es } from 'date-fns/locale';
 import { getModulo } from './App.jsx';
 import useEsMovil, { useBloquearScroll } from './useEsMovil.js';
+import { X, CalendarDays } from 'lucide-react';
 
 function Calendario({ eventos, onDiaClick, onEventoClick }) {
   const [mesActual, setMesActual] = useState(new Date());
@@ -115,7 +116,7 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
           <div className="modal-card" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{format(hojaDia, "EEEE, d 'de' MMMM", { locale: es })}</h2>
-              <button className="btn-icon" onClick={() => setHojaDia(null)} aria-label="Cerrar">✕</button>
+              <button className="btn-icon" onClick={() => setHojaDia(null)} aria-label="Cerrar"><X size={16} /></button>
             </div>
 
             <div className="hoja-cuerpo">
@@ -131,7 +132,7 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
                   >
                     <span className="hoja-evento-color" style={{ background: mod.color }} />
                     <span className="hoja-evento-hora">
-                      {ev.todo_el_dia ? '🗓' : format(parseISO(ev.fecha_inicio), 'HH:mm')}
+                      {ev.todo_el_dia ? <CalendarDays size={12} /> : format(parseISO(ev.fecha_inicio), 'HH:mm')}
                     </span>
                     <span className="hoja-evento-titulo">{ev.titulo}</span>
                     <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>

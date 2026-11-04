@@ -11,6 +11,21 @@
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <title>Calendario DAW 2º</title>
+    <script>
+      // Aplica el tema antes del primer pintado para que no parpadee al abrir
+      (function () {
+        try {
+          var guardado = localStorage.getItem('caldaw_tema');
+          var claro = guardado ? guardado === 'claro'
+            : window.matchMedia('(prefers-color-scheme: light)').matches;
+          var tema = claro ? 'claro' : 'oscuro';
+          document.documentElement.dataset.tema = tema;
+          document.documentElement.style.colorScheme = tema === 'claro' ? 'light' : 'dark';
+          document.querySelector('meta[name="theme-color"]')
+            .setAttribute('content', tema === 'claro' ? '#f8fafc' : '#0f172a');
+        } catch (e) { }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
