@@ -81,7 +81,7 @@ export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar
                       <span className="meta-item">
                         <IconoTipo tipoId={ev.tipo_id} size={13} /> {NOMBRES_TIPO[ev.tipo_id] || 'Otro'}
                       </span>
-                      <span className="evento-card-badge" style={{ background: mod.color }}>{mod.nombre}</span>
+                      <span className="chip-modulo" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
                       {!ev.todo_el_dia && <span className="meta-num">{format(parseISO(ev.fecha_inicio), 'HH:mm')}</span>}
                       {ev.enlace && (
                         <a href={ev.enlace} target="_blank" rel="noreferrer"

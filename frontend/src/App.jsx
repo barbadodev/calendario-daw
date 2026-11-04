@@ -233,15 +233,14 @@ export default function App() {
 
       <div className="filtros-bar">
         <button className={`filtro-chip ${filtroModulo === 'todos' ? 'active' : ''}`}
-          style={filtroModulo === 'todos' ? { background: 'var(--primary)', borderColor: 'var(--primary)' } : {}}
           onClick={() => setFiltroModulo('todos')}>Todos</button>
         {MODULOS.map(m => (
           <button key={m.id} className={`filtro-chip ${filtroModulo === m.id ? 'active' : ''}`}
-            style={filtroModulo === m.id ? { background: m.color, borderColor: m.color } : {}}
+            style={{ '--tinte': m.color }}
             onClick={() => setFiltroModulo(m.id)}>{m.nombre}</button>
         ))}
         <button className={`filtro-chip ${soloPendientes ? 'active' : ''}`}
-          style={soloPendientes ? { background: 'var(--success)', borderColor: 'var(--success)' } : {}}
+          style={{ '--tinte': 'var(--success)' }}
           onClick={() => setSoloPendientes(v => !v)}><Check size={11} strokeWidth={3} /> Pendientes</button>
       </div>
 

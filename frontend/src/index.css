@@ -244,6 +244,7 @@ input, textarea, select {
 .filtro-chip.active {
   color: white;
   border-color: transparent;
+  background: var(--tinte, var(--primary));
 }
 
 /* ====== NAVEGACIÓN MES ====== */
@@ -334,6 +335,7 @@ input, textarea, select {
 }
 
 .dia-evento-mini {
+  background: var(--tinte);
   font-size: 0.625rem;
   padding: 0.125rem 0.25rem;
   border-radius: 3px;
@@ -433,6 +435,13 @@ input, textarea, select {
   border-radius: 999px;
   background: var(--bg-card);
   color: var(--text-muted);
+}
+
+/* Chips de módulo: el color llega por --tinte desde React,
+   así cada estilo puede decidir si lo pinta sólido, pastel o con halo. */
+.chip-modulo {
+  background: var(--tinte);
+  color: #fff;
 }
 
 .evento-card-origen-moodle {
@@ -1068,6 +1077,7 @@ input, textarea, select {
   @apply flex items-center gap-2 pl-1 text-[0.78rem] min-w-0;
 }
 .cierre-chip {
+  background: var(--tinte);
   @apply shrink-0 rounded px-1.5 py-0.5 text-[0.65rem] font-semibold text-white;
 }
 .cierre-titulo {
@@ -1214,6 +1224,44 @@ input, textarea, select {
 .nota-nombre { color: var(--primary); font-weight: 600; }
 .girando { animation: girar 1s linear infinite; }
 @keyframes girar { to { transform: rotate(360deg); } }
+
+/* --- Celda de evento en la vista semanal de escritorio --- */
+.celda-evento {
+  display: block;
+  width: 100%;
+  background: var(--tinte);
+  color: #fff;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  margin-bottom: 3px;
+  cursor: pointer;
+  border: none;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Barra de filtros incrustada (pestaña Notas) --- */
+.filtros-bar-interna {
+  margin: -1rem -1rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+}
+
+/* --- Ficha de módulo en Notas --- */
+.notas-card { border-left: 4px solid var(--tinte); }
+.notas-card .nota-form { margin-top: 0.75rem; }
+.nota-input {
+  flex: 1;
+  padding: 0.5rem;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+}
+.notas-lista { margin-top: 1rem; }
 
 /* ====== TOAST de confirmación en pantalla ====== */
 /* Va arriba para no tapar el botón + ni el contenido al hacer scroll */

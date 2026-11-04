@@ -58,7 +58,7 @@ export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
                       {ev.todo_el_dia ? <CalendarDays size={12} /> : format(parseISO(ev.fecha_inicio), 'HH:mm')}
                     </span>
                     <span className="agenda-evento-titulo">{ev.titulo}</span>
-                    <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>
+                    <span className="chip-modulo" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
                   </button>
                 );
               })}
@@ -97,10 +97,9 @@ export default function VistaSemanal({ eventos, onEventoClick, onDiaClick }) {
                 const mod = getModulo(ev.modulo_id);
                 return (
                   <div key={ev.id} onClick={(e) => { e.stopPropagation(); onEventoClick(ev); }}
+                    className="celda-evento"
                     style={{
-                      background: mod.color, color: 'white',
-                      padding: '3px 6px', borderRadius: 4, fontSize: '0.7rem',
-                      marginBottom: 3, cursor: 'pointer',
+                      '--tinte': mod.color,
                       textDecoration: ev.completado ? 'line-through' : 'none',
                       opacity: ev.completado ? 0.5 : 1,
                     }}>

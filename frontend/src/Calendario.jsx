@@ -93,7 +93,7 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
                           <div
                             key={ev.id}
                             className="dia-evento-mini"
-                            style={{ background: mod.color }}
+                            style={{ '--tinte': mod.color }}
                             onClick={(e) => { e.stopPropagation(); onEventoClick(ev); }}
                           >
                             {ev.titulo}
@@ -135,7 +135,7 @@ function Calendario({ eventos, onDiaClick, onEventoClick }) {
                       {ev.todo_el_dia ? <CalendarDays size={12} /> : format(parseISO(ev.fecha_inicio), 'HH:mm')}
                     </span>
                     <span className="hoja-evento-titulo">{ev.titulo}</span>
-                    <span className="evento-card-badge" style={{ background: mod.color, color: 'white' }}>{mod.nombre}</span>
+                    <span className="chip-modulo" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
                   </button>
                 );
               })}

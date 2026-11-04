@@ -15,6 +15,8 @@ export default function NotasModulo({ usuario }) {
       const res = await fetch(`${API}/api/notas-modulo/${sel}?sala=${usuario.codigo_sala}`);
       const data = await res.json();
       setNotas(data.notas || []);
+    } catch {
+      setNotas([]);
     } finally {
       setCargando(false);
     }
@@ -37,35 +39,40 @@ export default function NotasModulo({ usuario }) {
 
   return (
     <div className="eventos-lista">
-      <div className="filtros-bar" style={{ margin: '-1rem -1rem 1rem -1rem', border: 'none', borderBottom: '1px solid var(--border)' }}>
+      <div className="filtros-bar filtros-bar-interna">
         {MODULOS.map(m => (
           <button key={m.id}
             className={`filtro-chip ${sel === m.id ? 'active' : ''}`}
-            style={sel === m.id ? { background: m.color, borderColor: m.color } : {}}
+            style={{ '--tinte': m.color }}
             onClick={() => setSel(m.id)}>{m.nombre}</button>
         ))}
       </div>
 
-      <div className="ajustes-card" style={{ borderLeft: `4px solid ${mod.color}` }}>
+      <div className="ajustes-card notas-card" style={{ '--tinte': mod.color }}>
         <h3>Notas de {mod.nombre}</h3>
-        <form onSubmit={crearNota} style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+        <form onSubmit={crearNota} className="nota-form">
           <input type="text" value={nuevo} onChange={e => setNuevo(e.target.value)}
-            placeholder="Nuevo apunte, recordatorio, duda..."
-            style={{ flex: 1, padding: '0.5rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text)' }} />
+            placeholder="Nuevo apunte, recordatorio, duda…" className="nota-input" />
           <button type="submit" className="btn btn-filled">Añadir</button>
         </form>
 
-        {cargando ? <p style={{ color: 'var(--text-muted)' }}>Cargando...</p> : (
-          <div style={{ marginTop: '1rem' }}>
-            {notas.length === 0 ? <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Aún no hay notas en este módulo.</p> :
-              notas.map(n => (
-                <div key={n.id} style={{ background: 'var(--bg)', border: '1px solid var(--border)', padding: '0.5rem 0.75rem', borderRadius: 6, marginBottom: 6 }}>
-                  <div className="nota-meta"><span className="nota-nombre">{n.usuarios?.nombre || 'Anónimo'}</span> · {new Date(n.created_at).toLocaleString('es-ES')}</div>
-                  <div style={{ fontSize: '0.875rem', marginTop: 2, whiteSpace: 'pre-wrap' }}>{n.contenido}</div>
-                </div>
-              ))}
-          </div>
-        )}
+        {cargando
+          ? <p className="ayuda">Cargando…</p>
+          : notas.length === 0
+            ? <p className="ayuda">Aún no hay notas en este módulo.</p>
+            : (
+              <div className="notas-lista">
+                {notas.map(n => (
+                  <div key={n.id} className="nota-item">
+                    <div className="nota-meta">
+                      <span className="nota-nombre">{n.usuarios?.nombre || 'Anónimo'}</span>
+                      {' · '}{new Date(n.created_at).toLocaleString('es-ES')}
+                    </div>
+                    <div className="nota-contenido">{n.contenido}</div>
+                  </div>
+                ))}
+              </div>
+            )}
       </div>
     </div>
   );

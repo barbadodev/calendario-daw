@@ -62,7 +62,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
             const mod = MODULOS.find(m => m.id === c.modulo_id) || { nombre: String(c.modulo_id || '?').toUpperCase(), color: '#6b7280' };
             return (
               <div key={c.id} className={`cierre-fila ${c.nivel}`}>
-                <span className="cierre-chip" style={{ background: mod.color }}>{mod.nombre}</span>
+                <span className="cierre-chip" style={{ '--tinte': mod.color }}>{mod.nombre}</span>
                 <span className="cierre-titulo">{c.titulo}</span>
                 <span className="cierre-horas">{textoHoras(c)}</span>
                 {c.enlace && (

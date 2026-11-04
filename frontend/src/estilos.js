@@ -3,6 +3,7 @@
 
 export const ESTILOS = [
   { id: 'limpio',      nombre: 'Actual',        descripcion: 'Sobrio, glass suave' },
+  { id: 'macos',       nombre: 'macOS',         descripcion: 'Apple minimal, segmented, hairlines' },
   { id: 'glass',       nombre: 'Vision Glass',  descripcion: 'Vidro forte + aurora' },
   { id: 'neobrutalo',  nombre: 'Neobrutalismo', descripcion: 'Bordes gruesos y sombras duras' },
   { id: 'hud',         nombre: 'HUD Neón',      descripcion: 'Panel técnico oscuro' },
