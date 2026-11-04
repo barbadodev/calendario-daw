@@ -1139,6 +1139,22 @@ input, textarea, select {
   color: #fff;
 }
 
+/* Selector de estilo visual (reusa la pinta de .opcion-tema) */
+.selector-estilos {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+.opcion-estilo {
+  @apply flex flex-col items-start gap-0.5 text-left py-2.5;
+}
+.opcion-estilo .estilo-nombre { @apply text-[0.8125rem] font-semibold; }
+.opcion-estilo .estilo-desc {
+  @apply text-[0.6875rem] font-normal leading-tight;
+  color: var(--text-muted);
+}
+.opcion-estilo.activo .estilo-desc { color: inherit; opacity: .82; }
+
 /* --- URL y resumen --- */
 .bloque-url { @apply flex flex-col gap-2 p-3 rounded-md; background: var(--bg); border: 1px solid var(--border); }
 .bloque-url code { @apply text-[0.7rem] break-all; }

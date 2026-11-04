@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import SemanaExamenes from './SemanaExamenes.jsx';
 import { setModo, modoActual } from './tema.js';
+import { ESTILOS, estiloActual, setEstilo } from './estilos.js';
 import {
   Users, Bell, Monitor, Sun, Moon, GraduationCap, RefreshCw, CalendarRange,
-  Link, Copy, Share2, Download, Info, Check,
+  Link, Copy, Share2, Download, Info, Check, Layers,
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -22,6 +23,11 @@ export default function Ajustes({ usuario, eventos }) {
   const [mostrarIcsUrl, setMostrarIcsUrl] = useState(false);
   const [resumen, setResumen] = useState('');
   const [modo, setModoEstado] = useState(() => modoActual());
+  const [estilo, setEstiloEstado] = useState(() => estiloActual());
+
+  function elegirEstilo(id) {
+    setEstiloEstado(setEstilo(id));
+  }
 
   useEffect(() => {
     cargarUsuarios();
@@ -170,6 +176,24 @@ export default function Ajustes({ usuario, eventos }) {
           {modo === 'sistema'
             ? 'La app sigue el modo claro/oscuro que tenga tu móvil o navegador.'
             : `Fijado en modo ${modo}.`}
+        </p>
+      </div>
+
+      <div className="ajustes-card">
+        <h3 className="card-titulo"><Layers size={15} /> Estilo visual</h3>
+        <div className="selector-estilos">
+          {ESTILOS.map(({ id, nombre, descripcion }) => (
+            <button key={id}
+              className={`opcion-tema opcion-estilo ${estilo === id ? 'activo' : ''}`}
+              onClick={() => elegirEstilo(id)}>
+              <span className="estilo-nombre">{nombre}</span>
+              <span className="estilo-desc">{descripcion}</span>
+            </button>
+          ))}
+        </div>
+        <p className="ayuda">
+          Cambia el aspecto al instante. Se recuerda en tu dispositivo, cada uno puede llevar el suyo.
+          Atajo: <strong>Ctrl + Shift + S</strong> para probarlos en cadena.
         </p>
       </div>
 

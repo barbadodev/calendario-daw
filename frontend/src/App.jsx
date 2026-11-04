@@ -12,7 +12,8 @@ import ContadorProximo from './ContadorProximo.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
 import AlertaCierres from './AlertaCierres.jsx';
 import { supabase } from './supabase.js';
-import { setTema, temaActual, temaPreferido } from './tema.js';
+import { setTema, temaActual } from './tema.js';
+import { ESTILOS, setEstilo, estiloActual } from './estilos.js';
 import { CalendarDays, LogOut, Settings, Sun, Moon, Plus, Check, TriangleAlert } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL;
@@ -44,6 +45,21 @@ export default function App() {
   const [eventoDestacado, setEventoDestacado] = useState(null);
   const [aviso, setAviso] = useState(null);
   const [tema, setTemaEstado] = useState(() => temaActual());
+
+  // Ctrl+Shift+S cicla los estilos visuales para compararlos al vuelo
+  useEffect(() => {
+    function alPulsar(e) {
+      if (e.ctrlKey && e.shiftKey && (e.key === 'S' || e.key === 's')) {
+        e.preventDefault();
+        const i = ESTILOS.findIndex(x => x.id === estiloActual());
+        const siguiente = ESTILOS[(i + 1) % ESTILOS.length];
+        setEstilo(siguiente.id);
+        mostrarAviso(`Estilo: ${siguiente.nombre} (${i + 2}/${ESTILOS.length})`);
+      }
+    }
+    window.addEventListener('keydown', alPulsar);
+    return () => window.removeEventListener('keydown', alPulsar);
+  }, []);
 
   function alternarTema() {
     const siguiente = tema === 'oscuro' ? 'claro' : 'oscuro';
