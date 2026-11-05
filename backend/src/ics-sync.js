@@ -93,6 +93,16 @@ function formatearFechaNotif(isoStr) {
   }
 }
 
+/** Comprueba si dos marcas temporales difieren de forma significativa (> 60 segundos). */
+function fechasDifieren(f1, f2) {
+  if (!f1 && !f2) return false;
+  if (!f1 || !f2) return true;
+  const t1 = new Date(f1).getTime();
+  const t2 = new Date(f2).getTime();
+  if (isNaN(t1) || isNaN(t2)) return f1 !== f2;
+  return Math.abs(t1 - t2) > 60000;
+}
+
 /** Fusiona "Se abre X" + "Se cierra X" en un único evento con ventana de tiempo. */
 function fusionarPares(eventosMoodle) {
   const pares = new Map();
@@ -180,7 +190,7 @@ async function sincronizarFeed() {
         : (ev.url || null);
 
       const { data: existentes } = await supabaseAdmin
-        .from('eventos').select('id, modulo_id, tipo_id, titulo, fecha_inicio, fecha_fin')
+        .from('eventos').select('id, modulo_id, tipo_id, titulo, fecha_inicio, fecha_fin, descripcion, moodle_url, revisar')
         .eq('moodle_uid', uid).limit(1);
 
       const payload = {
@@ -200,22 +210,34 @@ async function sincronizarFeed() {
 
       if (existentes?.length) {
         const ex = existentes[0];
-        const cambioClasificacion = ex.modulo_id !== payload.modulo_id || ex.tipo_id !== payload.tipo_id || ex.titulo !== payload.titulo;
-        const cambioFechas = ex.fecha_inicio !== payload.fecha_inicio || ex.fecha_fin !== payload.fecha_fin;
+        const cambioClasificacion =
+          (ex.modulo_id || '') !== (payload.modulo_id || '') ||
+          (ex.tipo_id || '') !== (payload.tipo_id || '') ||
+          (ex.titulo || '').trim() !== (payload.titulo || '').trim();
 
-        if (cambioClasificacion || cambioFechas) {
+        const cambioFechas =
+          fechasDifieren(ex.fecha_inicio, payload.fecha_inicio) ||
+          fechasDifieren(ex.fecha_fin, payload.fecha_fin);
+
+        const cambioDetalles =
+          (ex.descripcion || '') !== (payload.descripcion || '') ||
+          (ex.moodle_url || '') !== (payload.moodle_url || '') ||
+          Boolean(ex.revisar) !== Boolean(payload.revisar);
+
+        if (cambioFechas) {
           actualizados++;
-          if (cambioFechas) {
-            payload.alerta_cierre = null; // Reiniciar alertas para la nueva fecha límite
-            if (!esPrimeraSincronizacion) {
-              const fechaFinEv = new Date(payload.fecha_fin || payload.fecha_inicio);
-              if (fechaFinEv.getTime() > Date.now() - 24 * 3600 * 1000) {
-                eventosModificados.push(payload);
-              }
+          payload.alerta_cierre = null; // Reiniciar alertas solo si la fecha límite realmente ha cambiado
+          if (!esPrimeraSincronizacion) {
+            const fechaFinEv = new Date(payload.fecha_fin || payload.fecha_inicio);
+            if (fechaFinEv.getTime() > Date.now() - 24 * 3600 * 1000) {
+              eventosModificados.push(payload);
             }
           }
+          await supabaseAdmin.from('eventos').update(payload).eq('moodle_uid', uid);
+        } else if (cambioClasificacion || cambioDetalles) {
+          actualizados++;
+          await supabaseAdmin.from('eventos').update(payload).eq('moodle_uid', uid);
         }
-        await supabaseAdmin.from('eventos').update(payload).eq('moodle_uid', uid);
       } else {
         await supabaseAdmin.from('eventos').insert(payload);
         creados++;
@@ -279,12 +301,21 @@ async function sincronizarFeed() {
           }
           console.log(`📢 Push enviado: ${eventosModificados.length} evento(s) Moodle modificado(s)`);
         } else if (eventosModificados.length > 3) {
-          await notificarTodos({
-            titulo: `🔄 Moodle: ${eventosModificados.length} fechas actualizadas`,
-            cuerpo: 'Se han modificado plazos de entregas o exámenes. Pulsa para ver los cambios.',
-            url: 'https://calendario-daw-1.onrender.com',
-          });
-          console.log(`📢 Push resumen enviado: ${eventosModificados.length} eventos Moodle actualizados`);
+          const ahoraMs = Date.now();
+          const ultimoPushModif = await leerConfig('ultimo_push_moodle_modificados', 0);
+          const minutosDesdeUltimo = (ahoraMs - Number(ultimoPushModif)) / 60000;
+
+          if (minutosDesdeUltimo >= 60) {
+            await notificarTodos({
+              titulo: `🔄 Moodle: ${eventosModificados.length} fechas actualizadas`,
+              cuerpo: 'Se han modificado plazos de entregas o exámenes. Pulsa para ver los cambios.',
+              url: 'https://calendario-daw-1.onrender.com',
+            });
+            await escribirConfig('ultimo_push_moodle_modificados', ahoraMs);
+            console.log(`📢 Push resumen enviado: ${eventosModificados.length} eventos Moodle actualizados`);
+          } else {
+            console.log(`⏳ Push resumen omitido por cooldown antispam (${Math.round(minutosDesdeUltimo)} min desde el último)`);
+          }
         }
       } catch (errNotif) {
         console.error('Error enviando notificaciones push Moodle:', errNotif.message);
@@ -322,10 +353,7 @@ export function iniciarSincronizacionMoodle() {
   setTimeout(() => sincronizarFeed(), 15_000);
   setInterval(() => sincronizarFeed(), 15 * 60 * 1000);
   import('./push.js').then(m => {
-    setInterval(() => m.enviarNotificacionesRecordatorio(), 5 * 60 * 1000);
-    setTimeout(() => m.enviarNotificacionesRecordatorio(), 60_000);
-    // Cierres inminentes: revisa cada 10 min (el primero poco después de arrancar)
-    setInterval(() => m.revisarCierresProximos(), 10 * 60 * 1000);
-    setTimeout(() => m.revisarCierresProximos(), 25_000);
+    setTimeout(() => m.revisarAlertasYRecordatorios(), 30_000);
+    setInterval(() => m.revisarAlertasYRecordatorios(), 10 * 60 * 1000);
   });
 }
