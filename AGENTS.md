@@ -74,6 +74,9 @@ Cualquier agente (OpenCode, Antigravity, Codex) debe seguir estrictamente este p
 
 5. **Subida Obligatoria a GitHub (commit y push):**
    * Tras cada cambio verificado con éxito, realizar **obligatoriamente** el git commit descriptivo y el git push a GitHub para que los despliegues automáticos en producción (Render) y el repositorio queden inmediatamente sincronizados sin retrasos ni desajustes.
+6. **Aviso Sonoro de Tarea Terminada:**
+   * Al finalizar satisfactoriamente cada tarea, emitir siempre el aviso acústico de finalización (notificación estilo OpenCode):
+     `powershell -Command "(New-Object Media.SoundPlayer 'C:\Windows\Media\Windows Notify Messaging.wav').PlaySync()"`
 
 ---
 
