@@ -16,7 +16,7 @@ const PATRONES_MODULO = [
   { id: 'dwes', patrones: [/\bdwes?\b/i, /\bphp\b/i, /\bservidor\b/i, /\blaravel\b/i, /\bmariadb\b/i, /\bmysql\b/i, /\bsql\b/i, /\bbbdd\b/i, /\bentorno servidor\b/i, /\bcookie/i] },
   { id: 'daw',  patrones: [/\bdaw\b/i, /\bdespliegue\b/i, /\bdocker\b/i, /\bkubernetes\b/i, /\bcontenedor/i, /\bvirtualiza/i, /\bhipervisor/i, /\bvps\b/i, /\blxc\b/i, /\bhosting\b/i] },
   { id: 'diw',  patrones: [/\bdiw\b/i, /\bdise[ñn]o de interfaces/i, /\bdise[ñn]o web\b/i, /\bdise[ñn]o y prototipo/i, /\bfigma\b/i, /\bprototipo\b/i, /\bmaquetaci/i, /\baccesibilidad\b/i, /\bresponsive\b/i] },
-  { id: 'en',   patrones: [/\bingle[sñ]s?\b/i, /\benglish\b/i, /\bingl[ée]s\b/i] },
+  { id: 'en',   patrones: [/\bingle[sñ]s?\b/i, /\benglish\b/i, /\bingl[ée]s\b/i, /\bwriting\b/i, /\bspeaking\b/i, /\breading\b/i, /\blistening\b/i, /\bvocabulary\b/i, /\bgrammar\b/i, /\bessay\b/i] },
   { id: 'ipe',  patrones: [/\bipe\b/i, /\bitinerario personal/i, /\bempleabilidad\b/i, /\binserci[oó]n laboral/i] },
   { id: 'opt',  patrones: [/\boptativa\b/i] },
   { id: 'proy', patrones: [/\bproyecto\b/i, /\bptv\b/i, /\btrabajo de fin de ciclo/i] },
