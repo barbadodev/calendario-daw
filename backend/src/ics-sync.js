@@ -205,10 +205,13 @@ async function sincronizarFeed() {
 
         if (cambioClasificacion || cambioFechas) {
           actualizados++;
-          if (cambioFechas && !esPrimeraSincronizacion) {
-            const fechaFinEv = new Date(payload.fecha_fin || payload.fecha_inicio);
-            if (fechaFinEv.getTime() > Date.now() - 24 * 3600 * 1000) {
-              eventosModificados.push(payload);
+          if (cambioFechas) {
+            payload.alerta_cierre = null; // Reiniciar alertas para la nueva fecha límite
+            if (!esPrimeraSincronizacion) {
+              const fechaFinEv = new Date(payload.fecha_fin || payload.fecha_inicio);
+              if (fechaFinEv.getTime() > Date.now() - 24 * 3600 * 1000) {
+                eventosModificados.push(payload);
+              }
             }
           }
         }
