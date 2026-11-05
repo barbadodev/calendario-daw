@@ -229,7 +229,7 @@ export async function revisarCierresProximos() {
 }
 
 // Envía a TODO el grupo (a diferencia de notificarCambio, que excluye al autor)
-async function notificarTodos({ titulo, cuerpo, url }) {
+export async function notificarTodos({ titulo, cuerpo, url }) {
   const { data: subs } = await supabaseAdmin.from('suscripciones_push').select('id, datos');
   if (!subs || subs.length === 0) return { enviadas: 0 };
 

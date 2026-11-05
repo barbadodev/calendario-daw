@@ -1,6 +1,7 @@
 import './load-env.js';
 import ical from 'node-ical';
 import { supabaseAdmin } from './db.js';
+import { notificarTodos, notificarCambio } from './push.js';
 
 const BASE_MOODLE = (() => {
   try {
@@ -66,6 +67,32 @@ function detectarTipo(ev) {
   return 'otro';
 }
 
+function nombreTipo(tipoId) {
+  switch (tipoId) {
+    case 'examen': return 'Examen';
+    case 'entrega': return 'Tarea / Entrega';
+    case 'clase': return 'Clase / Sesión';
+    default: return 'Publicación';
+  }
+}
+
+function formatearFechaNotif(isoStr) {
+  if (!isoStr) return '';
+  try {
+    const d = new Date(isoStr);
+    return d.toLocaleDateString('es-ES', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: 'Europe/Madrid',
+    });
+  } catch {
+    return '';
+  }
+}
+
 /** Fusiona "Se abre X" + "Se cierra X" en un único evento con ventana de tiempo. */
 function fusionarPares(eventosMoodle) {
   const pares = new Map();
@@ -124,11 +151,15 @@ async function sincronizarFeed() {
     const raw = Object.values(data).filter(e => e.type === 'VEVENT');
     const eventos = fusionarPares(raw);
     const cursoMap = await leerConfig('moodle_course_map', {});
+    const prevSync = await leerConfig('moodle_sync', null);
+    const esPrimeraSincronizacion = !prevSync || !prevSync.last_ok;
     let nuevosCursos = 0;
 
     console.log(`📥 Moodle: ${raw.length} crudos → ${eventos.length} tras fusionar`);
     let creados = 0, actualizados = 0;
     const uidsVistos = new Set();
+    const nuevosEventos = [];
+    const eventosModificados = [];
 
     for (const ev of eventos) {
       const uid = ev.uid;
@@ -149,7 +180,7 @@ async function sincronizarFeed() {
         : (ev.url || null);
 
       const { data: existentes } = await supabaseAdmin
-        .from('eventos').select('id, modulo_id, tipo_id, titulo')
+        .from('eventos').select('id, modulo_id, tipo_id, titulo, fecha_inicio, fecha_fin')
         .eq('moodle_uid', uid).limit(1);
 
       const payload = {
@@ -169,11 +200,28 @@ async function sincronizarFeed() {
 
       if (existentes?.length) {
         const ex = existentes[0];
-        if (ex.modulo_id !== payload.modulo_id || ex.tipo_id !== payload.tipo_id || ex.titulo !== payload.titulo) actualizados++;
+        const cambioClasificacion = ex.modulo_id !== payload.modulo_id || ex.tipo_id !== payload.tipo_id || ex.titulo !== payload.titulo;
+        const cambioFechas = ex.fecha_inicio !== payload.fecha_inicio || ex.fecha_fin !== payload.fecha_fin;
+
+        if (cambioClasificacion || cambioFechas) {
+          actualizados++;
+          if (cambioFechas && !esPrimeraSincronizacion) {
+            const fechaFinEv = new Date(payload.fecha_fin || payload.fecha_inicio);
+            if (fechaFinEv.getTime() > Date.now() - 24 * 3600 * 1000) {
+              eventosModificados.push(payload);
+            }
+          }
+        }
         await supabaseAdmin.from('eventos').update(payload).eq('moodle_uid', uid);
       } else {
         await supabaseAdmin.from('eventos').insert(payload);
         creados++;
+        if (!esPrimeraSincronizacion) {
+          const fechaFinEv = new Date(payload.fecha_fin || payload.fecha_inicio);
+          if (fechaFinEv.getTime() > Date.now() - 24 * 3600 * 1000) {
+            nuevosEventos.push(payload);
+          }
+        }
       }
     }
 
@@ -192,6 +240,54 @@ async function sincronizarFeed() {
       console.log(`🧠 Nuevo curso reconocido: ${JSON.stringify(cursoMap)}`);
     }
 
+    // --- Enviar Notificaciones Push de Moodle al Grupo ---
+    if (!esPrimeraSincronizacion) {
+      try {
+        if (nuevosEventos.length > 0 && nuevosEventos.length <= 3) {
+          for (const ev of nuevosEventos) {
+            const mod = (ev.modulo_id || 'Moodle').toUpperCase();
+            const tipo = nombreTipo(ev.tipo_id);
+            const fecha = formatearFechaNotif(ev.fecha_fin || ev.fecha_inicio);
+            await notificarTodos({
+              titulo: `🎓 ${mod} (Moodle): ${tipo}`,
+              cuerpo: `${ev.titulo}${fecha ? ` · Límite: ${fecha}` : ''}`,
+              url: ev.moodle_url || 'https://calendario-daw-1.onrender.com',
+            });
+          }
+          console.log(`📢 Push enviado: ${nuevosEventos.length} nuevo(s) evento(s) Moodle`);
+        } else if (nuevosEventos.length > 3) {
+          await notificarTodos({
+            titulo: `🎓 Moodle: ${nuevosEventos.length} nuevas publicaciones`,
+            cuerpo: 'Los profesores han subido nuevas tareas o exámenes. Pulsa para ver el calendario.',
+            url: 'https://calendario-daw-1.onrender.com',
+          });
+          console.log(`📢 Push resumen enviado: ${nuevosEventos.length} nuevos eventos Moodle`);
+        }
+
+        if (eventosModificados.length > 0 && eventosModificados.length <= 3) {
+          for (const ev of eventosModificados) {
+            const mod = (ev.modulo_id || 'Moodle').toUpperCase();
+            const fecha = formatearFechaNotif(ev.fecha_fin || ev.fecha_inicio);
+            await notificarTodos({
+              titulo: `🔄 ${mod} (Moodle): Fecha modificada`,
+              cuerpo: `${ev.titulo}${fecha ? ` · Nueva fecha: ${fecha}` : ''}`,
+              url: ev.moodle_url || 'https://calendario-daw-1.onrender.com',
+            });
+          }
+          console.log(`📢 Push enviado: ${eventosModificados.length} evento(s) Moodle modificado(s)`);
+        } else if (eventosModificados.length > 3) {
+          await notificarTodos({
+            titulo: `🔄 Moodle: ${eventosModificados.length} fechas actualizadas`,
+            cuerpo: 'Se han modificado plazos de entregas o exámenes. Pulsa para ver los cambios.',
+            url: 'https://calendario-daw-1.onrender.com',
+          });
+          console.log(`📢 Push resumen enviado: ${eventosModificados.length} eventos Moodle actualizados`);
+        }
+      } catch (errNotif) {
+        console.error('Error enviando notificaciones push Moodle:', errNotif.message);
+      }
+    }
+
     await escribirConfig('moodle_sync', {
       last_ok: new Date().toISOString(),
       eventos: eventos.length,
@@ -207,7 +303,6 @@ async function sincronizarFeed() {
     // Avisar al grupo solo la primera vez que rompe (evita spam)
     if (!prev?.error) {
       try {
-        const { notificarCambio } = await import('./push.js');
         await notificarCambio({
           exceptoUsuarioId: null,
           titulo: '⚠️ Moodle deja de sincronizar',
