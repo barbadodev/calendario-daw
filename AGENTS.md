@@ -72,6 +72,9 @@ Cualquier agente (OpenCode, Antigravity, Codex) debe seguir estrictamente este p
 4. **Respeto a la Inmutabilidad de Moodle:**
    * **NUNCA borrar de la base de datos un evento con origen `moodle`** (se recrearía en el siguiente ciclo de sincronización). Para anularlo, añadir una nota con el texto "cancelado" o registrar un evento manual de reemplazo.
 
+5. **Subida Obligatoria a GitHub (commit y push):**
+   * Tras cada cambio verificado con éxito, realizar **obligatoriamente** el git commit descriptivo y el git push a GitHub para que los despliegues automáticos en producción (Render) y el repositorio queden inmediatamente sincronizados sin retrasos ni desajustes.
+
 ---
 
 ## 4. Archivos Críticos y Rutas Protegidas (PROHIBIDO Modificar sin Permiso Previo)
