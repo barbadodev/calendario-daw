@@ -77,6 +77,9 @@ Cualquier agente (OpenCode, Antigravity, Codex) debe seguir estrictamente este p
 6. **Aviso Sonoro de Tarea Terminada:**
    * Al finalizar satisfactoriamente cada tarea, emitir siempre el aviso acústico de finalización (notificación estilo OpenCode):
      `powershell -Command "(New-Object Media.SoundPlayer 'C:\Windows\Media\Windows Notify Messaging.wav').PlaySync()"`
+7. **Separación Estricta entre Notas y Eventos de Calendario:**
+   * Las notas de módulos (apuntes, dudas, recordatorios) se guardan exclusivamente en la tabla `notas_modulo` y se visualizan en la vista de Notas.
+   * **NUNCA crear un evento ni asignación en la tabla `eventos` (con fecha del día ni similar)** al registrar una nota, salvo que el usuario pida explícitamente programar un evento de calendario con fecha y hora.
 
 ---
 

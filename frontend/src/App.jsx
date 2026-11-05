@@ -5,9 +5,7 @@ import VistaSemanal from './VistaSemanal.jsx';
 import ListaEventos from './ListaEventos.jsx';
 import ModalEvento from './ModalEvento.jsx';
 import Ajustes from './Ajustes.jsx';
-import Estadisticas from './Estadisticas.jsx';
 import NotasModulo from './NotasModulo.jsx';
-import PlanEstudio from './PlanEstudio.jsx';
 import BannerMoodle from './BannerMoodle.jsx';
 import AlertaCierres from './AlertaCierres.jsx';
 import { MODULOS } from './modulos.js';
@@ -20,7 +18,10 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
-  const [vista, setVista] = useState(() => localStorage.getItem('caldaw_vista') || 'semana');
+  const [vista, setVista] = useState(() => {
+    const v = localStorage.getItem('caldaw_vista');
+    return (v === 'plan' || v === 'stats' || !v) ? 'semana' : v;
+  });
   const [eventos, setEventos] = useState([]);
   const [filtroModulo, setFiltroModulo] = useState('todos');
   const [soloPendientes, setSoloPendientes] = useState(() => localStorage.getItem('caldaw_pend') === '1');
@@ -51,7 +52,7 @@ export default function App() {
   useEffect(() => {
     const guardado = localStorage.getItem('usuario');
     if (guardado) {
-try {
+      try {
         const u = JSON.parse(guardado);
         setUsuario(u);
         fetch(`${API_URL}/api/auth/actividad`, {
@@ -262,7 +263,7 @@ try {
         <BannerMoodle sala={usuario.codigo_sala} />
 
         <nav className="view-tabs">
-          {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['plan','Plan'],['stats','Estadísticas'],['notas','Notas']].map(([id, label]) => (
+          {[['mes','Mes'],['semana','Semana'],['lista','Lista'],['notas','Notas']].map(([id, label]) => (
             <button key={id} className={`view-tab ${vista === id ? 'active' : ''}`} onClick={() => setVista(id)}>{label}</button>
           ))}
         </nav>
@@ -288,8 +289,6 @@ try {
         {vista === 'mes' && <Calendario eventos={eventosVista} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
         {vista === 'semana' && <VistaSemanal eventos={eventosVista} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
         {vista === 'lista' && <ListaEventos eventos={eventosVista} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
-        {vista === 'plan' && <PlanEstudio usuario={usuario} />}
-        {vista === 'stats' && <Estadisticas usuario={usuario} />}
         {vista === 'notas' && <NotasModulo usuario={usuario} />}
         {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
 
