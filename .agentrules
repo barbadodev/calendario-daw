@@ -1,0 +1,50 @@
+# .agentrules — Configuración de Contexto de IA (Antigravity & Codex)
+# Este archivo refuerza y enlaza las directrices unificadas definidas en AGENTS.md.
+# Aplica para Antigravity, OpenCode y Codex.
+
+[general]
+project_name = "Calendario DAW"
+canonical_rules_file = "AGENTS.md"
+
+[mandatory_protocol]
+# 1. Antes de escribir código:
+#    - Presentar un plan de acción y la lista explícita de archivos a crear/modificar.
+# 2. Durante la implementación:
+#    - Código 100% completo, sin métodos vacíos, sin funciones ficticias ni // TODO.
+# 3. Tras cada cambio:
+#    - Ejecutar 'npm run build' en frontend y 'node --check' en backend para verificar regresiones.
+
+[smart_handoff]
+# Avisar al usuario si la tarea se beneficia más de otro agente según sus tiers:
+# - Codex Free -> Derivar a Antigravity Pro si la tarea supera ~1.000 tokens o toca múltiples archivos (evitar agotar % cupo gratuito).
+# - OpenCode Go -> Derivar a Antigravity Pro si implica volcados masivos de código (evitar gasto innecesario de saldo USD).
+# - Antigravity Pro -> Sugerir OpenCode Go si es una ejecución rápida de script/CLI en clase (<300 tokens).
+
+[cost_and_token_budget]
+antigravity_pro_usd_marginal = 0.00
+antigravity_pro_context_tokens = "1M+"
+opencode_go_cost_nature = "Metred / USD credit consumption"
+codex_free_cost_nature = "Zero USD, but strict rate & token quota limit"
+threshold_heavy_task_tokens = 1000
+
+[critical_files_protected]
+# Prohibido editar sin permiso expreso del usuario:
+files = [
+  "backend/.env",
+  "frontend/.env",
+  "vapid-keys.txt",
+  "supabase/schema.sql",
+  "supabase/migrations*.sql",
+  "render.yaml",
+  "frontend/public/sw.js",
+  "backend/package-lock.json",
+  "frontend/package-lock.json"
+]
+
+[commands]
+backend_dev = "cd backend && npm run dev"
+frontend_dev = "cd frontend && npm run dev"
+frontend_build = "cd frontend && npm run build"
+backend_syntax_check = "node --check backend/server.js"
+list_events = "node scripts/list-events.js --dias 14"
+search_events = "node scripts/search-events.js"

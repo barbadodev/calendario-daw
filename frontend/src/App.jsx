@@ -51,8 +51,17 @@ export default function App() {
   useEffect(() => {
     const guardado = localStorage.getItem('usuario');
     if (guardado) {
-      try { setUsuario(JSON.parse(guardado)); }
-      catch { localStorage.removeItem('usuario'); }
+try {
+        const u = JSON.parse(guardado);
+        setUsuario(u);
+        fetch(`${API_URL}/api/auth/actividad`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ usuarioId: u.id, sala: u.codigo_sala }),
+        }).catch(() => {});
+      } catch {
+        localStorage.removeItem('usuario');
+      }
     }
     const params = new URLSearchParams(window.location.search);
     if (params.get('evento')) setEventoDestacado(params.get('evento'));

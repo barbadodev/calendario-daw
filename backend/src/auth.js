@@ -109,6 +109,25 @@ router.post('/entrar', async (req, res) => {
   }
 });
 
+// POST /api/auth/actividad — refresca last_seen cuando alguien abre la app con sesión guardada
+router.post('/actividad', async (req, res) => {
+  try {
+    const { usuarioId, sala } = req.body;
+    if (!usuarioId || sala !== process.env.SALA_CODIGO) {
+      return res.status(401).json({ error: 'No autorizado' });
+    }
+    const { error } = await supabaseAdmin
+      .from('usuarios')
+      .update({ last_seen: new Date().toISOString() })
+      .eq('id', usuarioId);
+    if (error) throw error;
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('Error en /auth/actividad:', err);
+    res.status(500).json({ error: 'Error interno' });
+  }
+});
+
 router.get('/usuarios', async (req, res) => {
   try {
     const codigoSala = req.query.sala;
