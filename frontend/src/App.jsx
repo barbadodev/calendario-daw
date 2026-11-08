@@ -18,6 +18,7 @@ const API_URL = import.meta.env.VITE_API_URL;
 
 export default function App() {
   const [usuario, setUsuario] = useState(null);
+  const [usuariosSala, setUsuariosSala] = useState([]);
   const [vista, setVista] = useState(() => {
     const v = localStorage.getItem('caldaw_vista');
     return (v === 'plan' || v === 'stats' || !v) ? 'semana' : v;
@@ -91,6 +92,7 @@ export default function App() {
   useEffect(() => {
     if (!usuario) return;
     cargarEventos();
+    cargarUsuariosSala();
     const channel = supabase
       .channel('eventos-changes')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'eventos' }, cargarEventos)
@@ -107,10 +109,22 @@ export default function App() {
     window.history.replaceState({}, '', window.location.pathname);
   }, [eventoDestacado, eventos]);
 
+  async function cargarUsuariosSala() {
+    try {
+      const { data, error } = await supabase.from('usuarios').select('id, nombre, color_personal').eq('codigo_sala', usuario.codigo_sala);
+      if (!error && data) setUsuariosSala(data);
+    } catch (err) { console.error('Error cargando usuarios:', err); }
+  }
+
   async function cargarEventos() {
     try {
       const { data, error } = await supabase.from('eventos').select('*').order('fecha_inicio', { ascending: true });
-      if (!error && data) setEventos(data);
+      if (!error && data) {
+        setEventos(data.map(e => ({
+          ...e,
+          completado: usuario ? (Array.isArray(e.adjuntos) && e.adjuntos.includes(usuario.id)) : !!e.completado,
+        })));
+      }
     } catch (err) { console.error(err); }
   }
 
@@ -173,18 +187,27 @@ export default function App() {
 
   async function toggleCompletar(id, valorActual) {
     const nuevo = !valorActual;
-    setEventos(prev => prev.map(e => e.id === id ? { ...e, completado: nuevo } : e));
+    // Actualización optimista inmediata en la UI para el usuario actual
+    setEventos(prev => prev.map(e => {
+      if (e.id !== id) return e;
+      const list = Array.isArray(e.adjuntos) ? e.adjuntos : [];
+      const nuevosAdjuntos = nuevo
+        ? (list.includes(usuario.id) ? list : [...list, usuario.id])
+        : list.filter(uid => uid !== usuario.id);
+      return { ...e, adjuntos: nuevosAdjuntos, completado: nuevo };
+    }));
+
     try {
       const res = await fetch(`${API_URL}/api/eventos/${id}/completar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sala: usuario.codigo_sala, valor: nuevo }),
+        body: JSON.stringify({ sala: usuario.codigo_sala, valor: nuevo, usuarioId: usuario.id }),
       });
       if (!res.ok) throw new Error('completar');
       return true;
     } catch {
-      // Deshacer el cambio optimista: si no, la interfaz miente.
-      setEventos(prev => prev.map(e => e.id === id ? { ...e, completado: valorActual } : e));
+      // Si falla, revertir recargando eventos
+      cargarEventos();
       mostrarAviso('No se pudo actualizar el evento', 'error');
       return false;
     }
@@ -259,7 +282,7 @@ export default function App() {
       </header>
 
       <main className="app-main">
-        <AlertaCierres sala={usuario.codigo_sala} onMarcarEntregado={marcarEntregado} />
+        <AlertaCierres sala={usuario.codigo_sala} usuarioId={usuario.id} onMarcarEntregado={marcarEntregado} />
         <BannerMoodle sala={usuario.codigo_sala} />
 
         <nav className="view-tabs">
@@ -288,7 +311,15 @@ export default function App() {
 
         {vista === 'mes' && <Calendario eventos={eventosVista} onDiaClick={abrirModalCrear} onEventoClick={abrirModalEditar} />}
         {vista === 'semana' && <VistaSemanal eventos={eventosVista} onEventoClick={abrirModalEditar} onDiaClick={abrirModalCrear} />}
-        {vista === 'lista' && <ListaEventos eventos={eventosVista} onEventoClick={abrirModalEditar} onToggleCompletar={toggleCompletar} />}
+        {vista === 'lista' && (
+          <ListaEventos
+            eventos={eventosVista}
+            usuario={usuario}
+            usuariosSala={usuariosSala}
+            onEventoClick={abrirModalEditar}
+            onToggleCompletar={toggleCompletar}
+          />
+        )}
         {vista === 'notas' && <NotasModulo usuario={usuario} />}
         {vista === 'ajustes' && <Ajustes usuario={usuario} eventos={eventos} />}
 

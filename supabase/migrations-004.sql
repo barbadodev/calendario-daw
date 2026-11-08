@@ -1,0 +1,4 @@
+-- Migración 004: completado individual por usuario
+-- Los IDs de usuarios que completan cada evento se registran en 'adjuntos' (jsonb array de UUIDs).
+-- Si se desea tener una columna dedicada en el futuro:
+-- alter table public.eventos add column if not exists completado_por jsonb default '[]'::jsonb;

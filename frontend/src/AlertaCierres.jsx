@@ -5,7 +5,7 @@ import { IconoCheck } from './Icons.jsx';
 const API = import.meta.env.VITE_API_URL;
 
 /** Aviso de entregas cuyo plazo de cierre se acerca. */
-export default function AlertaCierres({ sala, onMarcarEntregado }) {
+export default function AlertaCierres({ sala, usuarioId, onMarcarEntregado }) {
   const [cierres, setCierres] = useState([]);
   const [minimizada, setMinimizada] = useState(
     () => sessionStorage.getItem('caldaw_cierres_min') === '1'
@@ -15,7 +15,9 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
     let vivo = true;
     async function cargar() {
       try {
-        const res = await fetch(`${API}/api/cierres-proximos?sala=${sala}`);
+        const query = new URLSearchParams({ sala });
+        if (usuarioId) query.set('usuarioId', usuarioId);
+        const res = await fetch(`${API}/api/cierres-proximos?${query}`);
         if (res.ok && vivo) {
           const d = await res.json();
           setCierres(d.cierres || []);
@@ -25,7 +27,7 @@ export default function AlertaCierres({ sala, onMarcarEntregado }) {
     cargar();
     const id = setInterval(cargar, 5 * 60 * 1000);
     return () => { vivo = false; clearInterval(id); };
-  }, [sala]);
+  }, [sala, usuarioId]);
 
   if (cierres.length === 0) return null;
 

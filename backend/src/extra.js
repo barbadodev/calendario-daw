@@ -6,15 +6,39 @@ import { revisarCierresProximos } from './push.js';
 
 export const routerEventosExtra = Router();
 
-// POST /api/eventos/:id/completar
+// POST /api/eventos/:id/completar (individual por usuario)
 routerEventosExtra.post('/:id/completar', async (req, res) => {
   try {
-    const { sala, valor } = req.body;
+    const { sala, valor, usuarioId } = req.body;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
+
+    const { data: ev, error: fetchErr } = await supabaseAdmin
+      .from('eventos')
+      .select('id, adjuntos, completado')
+      .eq('id', req.params.id)
+      .single();
+    if (fetchErr || !ev) return res.status(404).json({ error: 'Evento no encontrado' });
+
+    let lista = Array.isArray(ev.adjuntos) ? [...ev.adjuntos] : [];
+    if (usuarioId) {
+      if (valor) {
+        if (!lista.includes(usuarioId)) lista.push(usuarioId);
+      } else {
+        lista = lista.filter(id => id !== usuarioId);
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('eventos')
-      .update({ completado: !!valor, updated_at: new Date().toISOString() })
-      .eq('id', req.params.id).select().single();
+      .update({
+        adjuntos: lista,
+        completado: lista.length > 0,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', req.params.id)
+      .select()
+      .single();
+
     if (error) throw error;
     res.json({ evento: data });
   } catch (err) {
@@ -98,21 +122,24 @@ routerGlobal.get('/keepalive', (req, res) => res.json({ ok: true }));
 // Devuelve también las de 48 h para que la app pueda colorear por urgencia.
 routerGlobal.get('/cierres-proximos', async (req, res) => {
   try {
-    const { sala } = req.query;
+    const { sala, usuarioId } = req.query;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
 
     const ahora = Date.now();
     const { data } = await supabaseAdmin
       .from('eventos')
-      .select('id, titulo, modulo_id, fecha_fin, fecha_inicio, alerta_cierre, moodle_url, enlace, origen')
-      .eq('tipo_id', 'entrega')
-      .eq('completado', false);
+      .select('id, titulo, modulo_id, fecha_fin, fecha_inicio, alerta_cierre, moodle_url, enlace, origen, adjuntos')
+      .eq('tipo_id', 'entrega');
 
     const cierres = (data || []).map(ev => {
       const deadline = new Date(ev.fecha_fin || ev.fecha_inicio).getTime();
       return { ...ev, deadline, horas: (deadline - ahora) / 3600000 };
     })
-      .filter(e => !Number.isNaN(e.deadline) && e.horas > 0 && e.horas <= 48)
+      .filter(e => {
+        if (Number.isNaN(e.deadline) || e.horas <= 0 || e.horas > 48) return false;
+        if (usuarioId && Array.isArray(e.adjuntos) && e.adjuntos.includes(usuarioId)) return false;
+        return true;
+      })
       .sort((a, b) => a.horas - b.horas)
       .map(e => ({
         id: e.id,

@@ -1699,3 +1699,38 @@ a { color: var(--primary-text); }
   .modal-card { animation: none; }
   .fab, .evento-card, .view-tab { transition: none; }
 }
+
+/* Indicadores de completado por miembro del grupo */
+.grupo-completados {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.chip-usuario-check {
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.12rem 0.4rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  transition: all 0.2s ease;
+  background: var(--surface-2, rgba(0, 0, 0, 0.04));
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  cursor: default;
+}
+
+.chip-usuario-check.hecho {
+  background: rgba(61, 122, 92, 0.16);
+  color: #3d7a5c;
+  border-color: rgba(61, 122, 92, 0.35);
+}
+
+.chip-usuario-check.es-yo {
+  border-width: 1.5px;
+}
+

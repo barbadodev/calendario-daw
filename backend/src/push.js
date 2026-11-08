@@ -265,13 +265,16 @@ const NIVELES_ALERTA = {
 };
 
 // Envía a TODO el grupo (a diferencia de notificarCambio, que excluye al autor)
-export async function notificarTodos({ titulo, cuerpo, url }) {
-  const { data: subs } = await supabaseAdmin.from('suscripciones_push').select('id, datos');
+export async function notificarTodos({ titulo, cuerpo, url, excluirUsuariosIds = [] }) {
+  const { data: subs } = await supabaseAdmin.from('suscripciones_push').select('id, usuario_id, datos');
   if (!subs || subs.length === 0) return { enviadas: 0 };
 
   const payload = JSON.stringify({ titulo, cuerpo, url });
   let enviadas = 0;
   for (const s of subs) {
+    if (s.usuario_id && Array.isArray(excluirUsuariosIds) && excluirUsuariosIds.includes(s.usuario_id)) {
+      continue;
+    }
     try {
       await webpush.sendNotification(s.datos, payload);
       enviadas++;
@@ -303,9 +306,8 @@ export async function revisarAlertasYRecordatorios({ forzarDigest = false } = {}
     // Buscar entregas y exámenes NO completados
     const { data: eventos, error } = await supabaseAdmin
       .from('eventos')
-      .select('id, titulo, modulo_id, fecha_fin, fecha_inicio, alerta_cierre, enlace, moodle_url, tipo_id, completado')
-      .in('tipo_id', ['entrega', 'examen'])
-      .eq('completado', false);
+      .select('id, titulo, modulo_id, fecha_fin, fecha_inicio, alerta_cierre, enlace, moodle_url, tipo_id, completado, adjuntos')
+      .in('tipo_id', ['entrega', 'examen']);
 
     if (error) throw error;
     if (!eventos || eventos.length === 0) return;
@@ -405,6 +407,7 @@ export async function revisarAlertasYRecordatorios({ forzarDigest = false } = {}
         // Menos de 1 hora
         if (ev.horasRestantes <= 1 && prioridad < NIVELES_ALERTA['hoy_1h']) {
           await notificarTodos({
+            excluirUsuariosIds: Array.isArray(ev.adjuntos) ? ev.adjuntos : [],
             titulo: `🚨 ¡ÚLTIMA HORA! (${ev.mod}): ${ev.titulo}`,
             cuerpo: `Cierra en menos de 1 h (${ev.horaFin}). ¿Ya la has subido? Entrégala ya.`,
             url: ev.moodle_url || ev.enlace || 'https://calendario-daw-1.onrender.com',
@@ -417,6 +420,7 @@ export async function revisarAlertasYRecordatorios({ forzarDigest = false } = {}
         // Menos de 3 horas
         if (ev.horasRestantes <= 3 && prioridad < NIVELES_ALERTA['hoy_3h']) {
           await notificarTodos({
+            excluirUsuariosIds: Array.isArray(ev.adjuntos) ? ev.adjuntos : [],
             titulo: `⚠️ ¡Quedan 3h! (${ev.mod}): ${ev.titulo}`,
             cuerpo: `Cierra hoy a las ${ev.horaFin}. No lo dejes para el último momento.`,
             url: ev.moodle_url || ev.enlace || 'https://calendario-daw-1.onrender.com',
@@ -429,6 +433,7 @@ export async function revisarAlertasYRecordatorios({ forzarDigest = false } = {}
         // Menos de 6 horas (tarde)
         if (ev.horasRestantes <= 6 && prioridad < NIVELES_ALERTA['hoy_6h']) {
           await notificarTodos({
+            excluirUsuariosIds: Array.isArray(ev.adjuntos) ? ev.adjuntos : [],
             titulo: `⏰ Quedan 6h (${ev.mod}): ${ev.titulo}`,
             cuerpo: `Cierra hoy a las ${ev.horaFin}. Recuerda subirla a Moodle y marcarla como completada.`,
             url: ev.moodle_url || ev.enlace || 'https://calendario-daw-1.onrender.com',
@@ -442,6 +447,7 @@ export async function revisarAlertasYRecordatorios({ forzarDigest = false } = {}
       // El día de antes (si aún no se había avisado, p. ej. tarea añadida por la tarde)
       if (ev.diasRestantes === 1 && prioridad < NIVELES_ALERTA['aviso_1d'] && !ev.alerta_cierre) {
         await notificarTodos({
+          excluirUsuariosIds: Array.isArray(ev.adjuntos) ? ev.adjuntos : [],
           titulo: `⚠️ Mañana vence (${ev.mod}): ${ev.titulo}`,
           cuerpo: `Plazo hasta mañana a las ${ev.horaFin}. Tienes pendiente completarla.`,
           url: ev.moodle_url || ev.enlace || 'https://calendario-daw-1.onrender.com',

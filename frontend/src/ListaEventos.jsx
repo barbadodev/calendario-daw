@@ -4,7 +4,7 @@ import { es } from 'date-fns/locale';
 import { getModulo, NOMBRE_TIPO, tinte } from './modulos.js';
 import { IconoCheck, IconoEnlace } from './Icons.jsx';
 
-export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar }) {
+export default function ListaEventos({ eventos, usuario, usuariosSala = [], onEventoClick, onToggleCompletar }) {
   const [ocultarCompletados, setOcultarCompletados] = useState(false);
 
   const evsFiltrados = ocultarCompletados ? eventos.filter(e => !e.completado) : eventos;
@@ -42,12 +42,14 @@ export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar
             {grupos[fecha].map(ev => {
               const mod = getModulo(ev.modulo_id);
               const tipo = NOMBRE_TIPO[ev.tipo_id] || NOMBRE_TIPO.otro;
+              const completadosLista = Array.isArray(ev.adjuntos) ? ev.adjuntos : [];
+
               return (
                 <div key={ev.id} className="evento-card" onClick={() => onEventoClick(ev)}>
                   <div
                     className={`evento-check ${ev.completado ? 'hecho' : ''}`}
                     onClick={(e) => { e.stopPropagation(); onToggleCompletar(ev.id, ev.completado); }}
-                    title="Marcar como completado"
+                    title={ev.completado ? 'Completado por ti (pulsa para desmarcar)' : 'Marcar mi parte como completada'}
                     aria-label={ev.completado ? 'Marcar como pendiente' : 'Marcar como completado'}
                     role="checkbox"
                     aria-checked={!!ev.completado}
@@ -68,6 +70,24 @@ export default function ListaEventos({ eventos, onEventoClick, onToggleCompletar
                       <span className="evento-card-titulo" style={{ textDecoration: ev.completado ? 'line-through' : 'none' }}>{ev.titulo}</span>
                       {ev.revisar && <span className="etiqueta etiqueta-revisar">revisar</span>}
                       {ev.origen === 'moodle' && <span className="etiqueta etiqueta-moodle">Moodle</span>}
+
+                      {usuariosSala.length > 0 && (
+                        <div className="grupo-completados" onClick={e => e.stopPropagation()}>
+                          {usuariosSala.map(u => {
+                            const hecho = completadosLista.includes(u.id);
+                            const esYo = u.id === usuario?.id;
+                            return (
+                              <span
+                                key={u.id}
+                                className={`chip-usuario-check ${hecho ? 'hecho' : 'pendiente'} ${esYo ? 'es-yo' : ''}`}
+                                title={`${u.nombre}: ${hecho ? 'Completado' : 'Pendiente'}`}
+                              >
+                                {u.nombre.slice(0, 1).toUpperCase()} {hecho ? '✓' : '…'}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                     <div className="evento-card-meta">
                       <span>{tipo}</span>
