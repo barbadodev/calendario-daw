@@ -19,6 +19,8 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   const [enlace, setEnlace] = useState('');
   const [notas, setNotas] = useState([]);
   const [nuevaNota, setNuevaNota] = useState('');
+  const [guardando, setGuardando] = useState(false);
+  const [guardandoNota, setGuardandoNota] = useState(false);
 
   useEffect(() => {
     if (evento) {
@@ -50,26 +52,36 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
 
   async function guardarNota(e) {
     e.preventDefault();
-    if (!nuevaNota.trim() || !evento) return;
-    const res = await fetch(`${API_URL}/api/eventos/${evento.id}/notas`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, contenido: nuevaNota.trim(), autor_id: usuario.id }),
-    });
-    if (res.ok) {
-      const d = await res.json();
-      setNuevaNota('');
-      cargarNotas(evento.id);
-      if (onAviso) {
-        onAviso(d.avisados > 0
-          ? `Nota guardada · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
-          : 'Nota guardada · nadie tiene las notificaciones activas');
+    if (!nuevaNota.trim() || !evento || guardandoNota) return;
+    setGuardandoNota(true);
+    try {
+      const res = await fetch(`${API_URL}/api/eventos/${evento.id}/notas`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, contenido: nuevaNota.trim(), autor_id: usuario.id }),
+      });
+      if (res.ok) {
+        const d = await res.json();
+        setNuevaNota('');
+        cargarNotas(evento.id);
+        if (onAviso) {
+          onAviso(d.avisados > 0
+            ? `Nota guardada · avisados ${d.avisados} compañero${d.avisados === 1 ? '' : 's'}`
+            : 'Nota guardada · nadie tiene las notificaciones activas');
+        }
       }
+    } catch {
+      /* Silencioso */
+    } finally {
+      setGuardandoNota(false);
     }
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
+    if (guardando) return;
+    setGuardando(true);
+
     const fechaCompleta = todoElDia
       ? new Date(fechaInicio + 'T00:00:00').toISOString()
       : new Date(`${fechaInicio}T${horaInicio}:00`).toISOString();
@@ -83,7 +95,16 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
       todo_el_dia: todoElDia,
       enlace: enlace.trim() || null,
     };
-    esEdicion ? onActualizar(evento.id, payload) : onCrear(payload);
+
+    try {
+      if (esEdicion) {
+        await onActualizar(evento.id, payload);
+      } else {
+        await onCrear(payload);
+      }
+    } finally {
+      setGuardando(false);
+    }
   }
 
   const esOrigenMoodle = evento?.origen === 'moodle';
@@ -92,21 +113,21 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
   // Escape cierra el modal, como en cualquier diálogo.
   useEffect(() => {
     function alPulsar(e) {
-      if (e.key === 'Escape') onCerrar();
+      if (e.key === 'Escape' && !guardando) onCerrar();
     }
     window.addEventListener('keydown', alPulsar);
     return () => window.removeEventListener('keydown', alPulsar);
-  }, [onCerrar]);
+  }, [onCerrar, guardando]);
 
   return (
-    <div className="modal-overlay" onClick={onCerrar}>
+    <div className="modal-overlay" onClick={() => { if (!guardando) onCerrar(); }}>
       <div className="modal-card" role="dialog" aria-modal="true" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
           <h2>
             {esEdicion ? 'Editar evento' : 'Nuevo evento'}
             {esOrigenMoodle && <span className="modal-sub">Sincronizado con Moodle</span>}
           </h2>
-          <button className="btn-icon" onClick={onCerrar} aria-label="Cerrar">
+          <button className="btn-icon" onClick={() => { if (!guardando) onCerrar(); }} aria-label="Cerrar">
             <IconoCerrar size={18} />
           </button>
         </div>
@@ -114,39 +135,39 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
           <div className="modal-body">
             <label htmlFor="ev-titulo">Título</label>
             <input id="ev-titulo" type="text" value={titulo} onChange={e => setTitulo(e.target.value)}
-              placeholder="Ej: Examen final DWES" required disabled={esOrigenMoodle} autoFocus={!esEdicion} />
+              placeholder="Ej: Examen final DWES" required disabled={esOrigenMoodle || guardando} autoFocus={!esEdicion} />
 
             <label htmlFor="ev-modulo">Módulo</label>
-            <select id="ev-modulo" value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={esOrigenMoodle}>
+            <select id="ev-modulo" value={moduloId} onChange={e => setModuloId(e.target.value)} disabled={esOrigenMoodle || guardando}>
               {MODULOS.map(m => <option key={m.id} value={m.id}>{m.nombre}</option>)}
             </select>
 
             <label htmlFor="ev-tipo">Tipo</label>
-            <select id="ev-tipo" value={tipoId} onChange={e => setTipoId(e.target.value)} disabled={esOrigenMoodle}>
+            <select id="ev-tipo" value={tipoId} onChange={e => setTipoId(e.target.value)} disabled={esOrigenMoodle || guardando}>
               {TIPOS.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
             </select>
 
             <div className="campo-fecha-hora">
               <div>
                 <label htmlFor="ev-fecha">Fecha</label>
-                <input id="ev-fecha" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required disabled={esOrigenMoodle} />
+                <input id="ev-fecha" type="date" value={fechaInicio} onChange={e => setFechaInicio(e.target.value)} required disabled={esOrigenMoodle || guardando} />
               </div>
               {!todoElDia && (
                 <div>
                   <label htmlFor="ev-hora">Hora</label>
-                  <input id="ev-hora" type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} disabled={esOrigenMoodle} />
+                  <input id="ev-hora" type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} disabled={esOrigenMoodle || guardando} />
                 </div>
               )}
             </div>
 
             <label className="label-check">
-              <input type="checkbox" checked={todoElDia} onChange={e => setTodoElDia(e.target.checked)} disabled={esOrigenMoodle} />
+              <input type="checkbox" checked={todoElDia} onChange={e => setTodoElDia(e.target.checked)} disabled={esOrigenMoodle || guardando} />
               Todo el día
             </label>
 
             <label htmlFor="ev-enlace">Enlace asociado (opcional)</label>
             <input id="ev-enlace" type="url" value={enlace} onChange={e => setEnlace(e.target.value)}
-              placeholder="https://moodle.../practica3" />
+              placeholder="https://moodle.../practica3" disabled={guardando} />
 
             {esOrigenMoodle && evento.moodle_url && (
               <div style={{ marginTop: '0.85rem' }}>
@@ -162,7 +183,7 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
               <div className="descripcion-lectura">{descripcion}</div>
             ) : (
               <textarea id="ev-descripcion" value={descripcion} onChange={e => setDescripcion(e.target.value)}
-                placeholder="Lo que dijo el profesor, temas, enlaces, detalles…" />
+                placeholder="Lo que dijo el profesor, temas, enlaces, detalles…" disabled={guardando} />
             )}
 
             {esEdicion && (
@@ -177,8 +198,10 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
                 ))}
                 <form onSubmit={guardarNota} className="nota-form">
                   <input type="text" value={nuevaNota} onChange={e => setNuevaNota(e.target.value)}
-                    placeholder="Nota rápida para el grupo…" aria-label="Nueva nota" />
-                  <button type="submit" className="btn btn-filled">Añadir</button>
+                    placeholder="Nota rápida para el grupo…" aria-label="Nueva nota" disabled={guardandoNota} />
+                  <button type="submit" className="btn btn-filled" disabled={guardandoNota || !nuevaNota.trim()}>
+                    {guardandoNota ? 'Añadiendo…' : 'Añadir'}
+                  </button>
                 </form>
               </div>
             )}
@@ -186,14 +209,14 @@ export default function ModalEvento({ evento, fechaInicial, usuario, onCrear, on
 
           <div className="modal-footer">
             {esEdicion && !esOrigenMoodle && (
-              <button type="button" className="btn btn-danger btn-eliminar" onClick={() => onEliminar(evento.id)}>Eliminar</button>
+              <button type="button" className="btn btn-danger btn-eliminar" onClick={() => onEliminar(evento.id)} disabled={guardando}>Eliminar</button>
             )}
             {esEdicion && (
-              <button type="button" className="btn" onClick={() => onDuplicar(evento.id)}>Duplicar +1 día</button>
+              <button type="button" className="btn" onClick={() => onDuplicar(evento.id)} disabled={guardando}>Duplicar +1 día</button>
             )}
-            <button type="button" className="btn" onClick={onCerrar}>Cancelar</button>
-            <button type="submit" className="btn btn-filled" disabled={esOrigenMoodle}>
-              {esEdicion ? 'Guardar cambios' : 'Crear evento'}
+            <button type="button" className="btn" onClick={onCerrar} disabled={guardando}>Cancelar</button>
+            <button type="submit" className="btn btn-filled" disabled={esOrigenMoodle || guardando}>
+              {guardando ? 'Guardando…' : esEdicion ? 'Guardar cambios' : 'Crear evento'}
             </button>
           </div>
         </form>

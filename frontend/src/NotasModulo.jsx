@@ -8,6 +8,7 @@ export default function NotasModulo({ usuario }) {
   const [notas, setNotas] = useState([]);
   const [nuevo, setNuevo] = useState('');
   const [cargando, setCargando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
 
   async function cargarNotas() {
     setCargando(true);
@@ -27,13 +28,20 @@ export default function NotasModulo({ usuario }) {
 
   async function crearNota(e) {
     e.preventDefault();
-    if (!nuevo.trim()) return;
-    const res = await fetch(`${API}/api/notas-modulo/${sel}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ sala: usuario.codigo_sala, contenido: nuevo, autor_id: usuario.id }),
-    });
-    if (res.ok) { setNuevo(''); cargarNotas(); }
+    if (!nuevo.trim() || enviando) return;
+    setEnviando(true);
+    try {
+      const res = await fetch(`${API}/api/notas-modulo/${sel}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sala: usuario.codigo_sala, contenido: nuevo.trim(), autor_id: usuario.id }),
+      });
+      if (res.ok) { setNuevo(''); cargarNotas(); }
+    } catch {
+      /* Silencioso */
+    } finally {
+      setEnviando(false);
+    }
   }
 
   const mod = MODULOS.find(m => m.id === sel);
@@ -55,8 +63,11 @@ export default function NotasModulo({ usuario }) {
           <input type="text" value={nuevo} onChange={e => setNuevo(e.target.value)}
             placeholder="Nuevo apunte, recordatorio, duda…"
             aria-label="Nueva nota"
+            disabled={enviando}
             style={{ padding: '0.55rem 0.7rem', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, color: 'var(--text)' }} />
-          <button type="submit" className="btn btn-filled">Añadir</button>
+          <button type="submit" className="btn btn-filled" disabled={enviando || !nuevo.trim()}>
+            {enviando ? 'Añadiendo…' : 'Añadir'}
+          </button>
         </form>
 
         {cargando ? <p style={{ color: 'var(--text-muted)', marginTop: '0.75rem' }}>Cargando…</p> : (

@@ -33,6 +33,7 @@ export default function App() {
   const [aviso, setAviso] = useState(null);
   const [tema, setTemaEstado] = useState(() => temaActual());
   const avisoTimer = useRef(null);
+  const guardandoAccionRef = useRef(false);
 
   function alternarTema() {
     const siguiente = tema === 'oscuro' ? 'claro' : 'oscuro';
@@ -136,6 +137,8 @@ export default function App() {
   }
 
   async function crearEvento(eventoData) {
+    if (guardandoAccionRef.current) return;
+    guardandoAccionRef.current = true;
     try {
       const res = await fetch(`${API_URL}/api/eventos`, {
         method: 'POST',
@@ -149,10 +152,14 @@ export default function App() {
       mostrarAviso('Evento guardado' + textoAvisos(d));
     } catch {
       mostrarAviso('No se pudo guardar el evento', 'error');
+    } finally {
+      guardandoAccionRef.current = false;
     }
   }
 
   async function actualizarEvento(id, eventoData) {
+    if (guardandoAccionRef.current) return;
+    guardandoAccionRef.current = true;
     try {
       const res = await fetch(`${API_URL}/api/eventos/${id}`, {
         method: 'PUT',
@@ -165,6 +172,8 @@ export default function App() {
       mostrarAviso('Cambios guardados' + textoAvisos(d));
     } catch {
       mostrarAviso('No se pudieron guardar los cambios', 'error');
+    } finally {
+      guardandoAccionRef.current = false;
     }
   }
 

@@ -101,6 +101,24 @@ router.post('/', async (req, res) => {
       return res.status(401).json({ error: 'No autorizado' });
     }
 
+    // Deduplicación / Protección contra doble submit accidental (doble toque en móvil)
+    if (evento.creado_por && evento.titulo && evento.fecha_inicio) {
+      const haceUnosSegundos = new Date(Date.now() - 8000).toISOString();
+      const { data: existente } = await supabaseAdmin
+        .from('eventos')
+        .select('*')
+        .eq('creado_por', evento.creado_por)
+        .eq('titulo', evento.titulo.trim())
+        .eq('fecha_inicio', evento.fecha_inicio)
+        .gte('created_at', haceUnosSegundos)
+        .limit(1);
+
+      if (existente && existente.length > 0) {
+        console.log(`⚠️ Descartado doble submit para evento: "${evento.titulo}"`);
+        return res.json({ evento: existente[0], avisados: 0, duplicadoEvitado: true });
+      }
+    }
+
     const { data, error } = await supabaseAdmin
       .from('eventos')
       .insert({
@@ -224,6 +242,22 @@ router.post('/:id/notas', async (req, res) => {
     const texto = String(contenido ?? '').trim();
     if (!texto) return res.status(400).json({ error: 'La nota está vacía' });
     if (texto.length > 1000) return res.status(400).json({ error: 'La nota es demasiado larga' });
+
+    // Deduplicación de notas de evento en ventana de 8s
+    if (autor_id) {
+      const haceUnosSegundos = new Date(Date.now() - 8000).toISOString();
+      const { data: existente } = await supabaseAdmin
+        .from('notas_evento')
+        .select('*')
+        .eq('evento_id', req.params.id)
+        .eq('autor_id', autor_id)
+        .eq('contenido', texto)
+        .gte('created_at', haceUnosSegundos)
+        .limit(1);
+      if (existente && existente.length > 0) {
+        return res.json({ nota: existente[0], avisados: 0, duplicadoEvitado: true });
+      }
+    }
 
     const { data, error } = await supabaseAdmin
       .from('notas_evento')

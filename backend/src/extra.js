@@ -317,6 +317,24 @@ routerNotasModulo.post('/:moduloId', async (req, res) => {
     const { sala, contenido, autor_id } = req.body;
     if (sala !== process.env.SALA_CODIGO) return res.status(401).json({ error: 'No autorizado' });
     if (!contenido?.trim()) return res.status(400).json({ error: 'Contenido vacío' });
+    const texto = contenido.trim();
+
+    // Deduplicación en ventana de 8s para notas de módulo
+    if (autor_id) {
+      const haceUnosSegundos = new Date(Date.now() - 8000).toISOString();
+      const { data: existente } = await supabaseAdmin
+        .from('notas_modulo')
+        .select('*')
+        .eq('modulo_id', req.params.moduloId)
+        .eq('autor_id', autor_id)
+        .eq('contenido', texto)
+        .gte('created_at', haceUnosSegundos)
+        .limit(1);
+      if (existente && existente.length > 0) {
+        return res.json({ nota: existente[0], duplicadoEvitado: true });
+      }
+    }
+
     const { data, error } = await supabaseAdmin.from('notas_modulo').insert({
       modulo_id: req.params.moduloId, contenido: contenido.trim(), autor_id: autor_id || null,
     }).select().single();
