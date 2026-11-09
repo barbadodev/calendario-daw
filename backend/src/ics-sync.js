@@ -327,20 +327,35 @@ async function sincronizarFeed() {
       eventos: eventos.length,
       creados, actualizados, borrados,
       error: null,
+      fallos_consecutivos: 0,
+      aviso_enviado: false,
     });
 
     console.log(`✅ Moodle OK (${creados} nuevos, ${actualizados} reclasificados, ${borrados} dados de baja)`);
   } catch (err) {
     console.error('❌ Error sincronizando Moodle:', err.message);
     const prev = await leerConfig('moodle_sync', {});
-    await escribirConfig('moodle_sync', { ...prev, last_error: new Date().toISOString(), error: err.message });
-    // Avisar al grupo solo la primera vez que rompe (evita spam)
-    if (!prev?.error) {
+    const fallos = (prev?.fallos_consecutivos || 0) + 1;
+    const esErrorCredenciales = /401|403|404|unauthorized|forbidden|invalid/i.test(err.message || '');
+    // Avisa si el token/URL es inválido de inmediato, o si lleva 3 intentos fallidos consecutivos (45 min)
+    const debeAvisar = esErrorCredenciales || fallos >= 3;
+
+    await escribirConfig('moodle_sync', {
+      ...prev,
+      last_error: new Date().toISOString(),
+      error: err.message,
+      fallos_consecutivos: fallos,
+      aviso_enviado: debeAvisar ? true : (prev?.aviso_enviado || false),
+    });
+
+    if (debeAvisar && !prev?.aviso_enviado) {
       try {
         await notificarCambio({
           exceptoUsuarioId: null,
           titulo: '⚠️ Moodle deja de sincronizar',
-          cuerpo: 'El acceso al calendario de Moodle falló. Antonio debe regenerar la URL del calendario.',
+          cuerpo: esErrorCredenciales
+            ? 'El enlace de Moodle ha caducado o no es válido. Antonio debe regenerar la URL del calendario.'
+            : 'Moodle lleva más de 45 minutos sin responder. Comprueba el estado de la plataforma.',
         });
       } catch { /* no romper el arranque */ }
     }
